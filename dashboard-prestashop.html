@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Pilotage commercial – SHOPYPHARMA</title>
+<title>Pilotage commercial – PrestaShop</title>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
@@ -57,7 +57,7 @@ th{color:var(--mute);font-weight:500}td.n,th.n{text-align:right;font-variant-num
   </section>
   <section class="grid grid2">
     <div class="card wrap"><h2>Dernières commandes</h2><table><thead><tr><th>Réf.</th><th>Date</th><th>Statut</th><th class="n">Total TTC</th></tr></thead><tbody id="t1"></tbody></table></div>
-    <div class="card wrap"><h2>Derniers retours produits</h2><table><thead><tr><th>Retour</th><th>Commande</th><th>Date</th><th>Statut</th></tr></thead><tbody id="t2"></tbody></table></div>
+    <div class="card wrap"><h2>Dernières commandes annulées / retournées</h2><table><thead><tr><th>Réf.</th><th>Date</th><th>Statut</th><th class="n">Total TTC</th></tr></thead><tbody id="t2"></tbody></table></div>
   </section>
 </main>
 <script>
@@ -77,11 +77,11 @@ function demo(days){
   const daily=[];let r=0,o=0;
   for(let i=days-1;i>=0;i--){const d=new Date(Date.now()-i*864e5);const x=Math.round(900+Math.random()*1600+(i%7<2?600:0));const c=Math.round(x/95);r+=x;o+=c;daily.push({d:d.toISOString().slice(0,10),rev:x,orders:c});}
   return {generatedAt:new Date().toISOString(),days,
-    kpis:{revenue:r,prevRevenue:r*0.9,orders:o,prevOrders:Math.round(o*0.94),aov:r/o,prevAov:r/o*0.96,customers:Math.round(o*0.8),repeatCustomers:Math.round(o*0.22),repeatRate:27.5,margin:Math.round(r*.38),prevMargin:Math.round(r*.9*.36),marginRate:38,cancelRate:5.8,newCustomers:Math.round(o*.58),abandoned:Math.round(o*1.6),abandonedRate:61.5,refunds:Math.round(o*.03),refundAmount:Math.round(r*.025),returns:Math.round(o*0.04),returnRate:4.1,prevReturnRate:5.2},
+    kpis:{revenue:r,prevRevenue:r*0.9,orders:o,prevOrders:Math.round(o*0.94),aov:r/o,prevAov:r/o*0.96,customers:Math.round(o*0.8),repeatCustomers:Math.round(o*0.22),repeatRate:27.5,margin:Math.round(r*.38),prevMargin:Math.round(r*.9*.36),marginRate:38,cancelRate:5.8,lostRevenue:Math.round(r*.05),newCustomers:Math.round(o*.58),abandoned:Math.round(o*1.6),abandonedRate:61.5,refunds:Math.round(o*.03),refundAmount:Math.round(r*.025),returns:Math.round(o*0.04),returnRate:4.1,prevReturnRate:5.2},
     monthRevenue:Math.round(r*.6),byPayment:[{label:'Carte bancaire',count:Math.round(o*.6)},{label:'PayPal',count:Math.round(o*.25)},{label:'Virement',count:Math.round(o*.1)},{label:'Paiement à la livraison',count:Math.round(o*.05)}],byCarrier:[{label:'Colissimo',count:Math.round(o*.5)},{label:'Chronopost',count:Math.round(o*.3)},{label:'Retrait en magasin',count:Math.round(o*.2)}],byWeekday:['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'].map((l,i)=>({label:l,rev:Math.round(r/7*(i>4?1.3:.9))})),daily,statuses:[{label:"Livré",count:Math.round(o*.55)},{label:"Expédié",count:Math.round(o*.2)},{label:"En préparation",count:Math.round(o*.12)},{label:"Annulé",count:Math.round(o*.06)},{label:"Remboursé",count:Math.round(o*.04)}],
     topProducts:[["Casque audio Pro",310],["Montre connectée S2",260],["Sac à dos urbain",205],["Enceinte Nomade",170],["Chargeur rapide 65W",120],["Coque premium",95]].map(p=>({name:p[0],rev:p[1]*days*3})),
     recent:Array.from({length:8},(_,i)=>({ref:"CMD"+(4800-i),date:new Date(Date.now()-i*36e5*5).toISOString(),total:60+i*23,status:["Livré","Expédié","En préparation"][i%3]})),
-    returnsList:Array.from({length:5},(_,i)=>({id:120-i,order:4700-i*4,date:new Date(Date.now()-i*864e5).toISOString(),status:["En attente","Reçu","Clôturé"][i%3]}))};
+    returnsList:Array.from({length:5},(_,i)=>({ref:"CMD"+(4700-i*4),date:new Date(Date.now()-i*864e5).toISOString(),total:80+i*31,status:"Annulé"}))};
 }
 
 async function load(){
@@ -106,10 +106,10 @@ function render(d){
     ["Panier moyen HT",fmt(k.aov),delta(k.aov,k.prevAov)],
     ["Clients récurrents",num(k.repeatCustomers),`<span class="d sub">sur ${num(k.customers)} clients actifs</span>`],
     ["Taux de réachat",pct(k.repeatRate),`<span class="d sub">≥ 2 commandes</span>`],
-    ["Retours produits",num(k.returns),delta(k.returnRate,k.prevReturnRate,true).replace("vs période préc.","(taux "+pct(k.returnRate)+")")],
+    ["Commandes annulées / retournées",num(k.returns),delta(k.returnRate,k.prevReturnRate,true).replace("vs période préc.","(taux "+pct(k.returnRate)+")")],
     ["Marge brute HT",fmt(k.margin),delta(k.margin,k.prevMargin)+` <span class="d sub">taux ${pct(k.marginRate)}</span>`],
     ["Nouveaux clients",num(k.newCustomers),`<span class="d sub">1re commande sur 12 mois</span>`],
-    ["Taux d’annulation",pct(k.cancelRate),`<span class="d sub">commandes annulées</span>`],
+    ["CA perdu (annulations)",fmt(k.lostRevenue),`<span class="d sub">HT sur commandes annulées</span>`],
     ["Paniers abandonnés",num(k.abandoned),`<span class="d sub">${pct(k.abandonedRate)} des paniers</span>`],
     ["Remboursements (avoirs)",fmt(k.refundAmount),`<span class="d sub">${num(k.refunds)} avoirs émis</span>`]];
   $("kpis").innerHTML=items.map(i=>`<div class="card kpi"><div class="l">${i[0]}</div><div class="v">${i[1]}</div>${i[2]}</div>`).join("");
@@ -129,7 +129,7 @@ function render(d){
   mk("c7",{type:"bar",data:{labels:d.byWeekday.map(s=>s.label),datasets:[{data:d.byWeekday.map(s=>s.rev),backgroundColor:pri,borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales}});
   const dt=s=>new Date(s).toLocaleDateString("fr-FR");
   $("t1").innerHTML=d.recent.map(o=>`<tr><td>${o.ref}</td><td>${dt(o.date)}</td><td><span class="tag">${o.status}</span></td><td class="n">${fmt(o.total)}</td></tr>`).join("");
-  $("t2").innerHTML=d.returnsList.length?d.returnsList.map(r=>`<tr><td>#${r.id}</td><td>#${r.order}</td><td>${dt(r.date)}</td><td><span class="tag">${r.status}</span></td></tr>`).join(""):'<tr><td colspan="4">Aucun retour sur la période.</td></tr>';
+  $("t2").innerHTML=d.returnsList.length?d.returnsList.map(o=>`<tr><td>${o.ref}</td><td>${dt(o.date)}</td><td><span class="tag">${o.status}</span></td><td class="n">${fmt(o.total)}</td></tr>`).join(""):'<tr><td colspan="4">Aucune annulation sur la période.</td></tr>';
 }
 $("days").onchange=load;$("ref").onclick=load;load();setInterval(load,REFRESH_MS);
 </script>
