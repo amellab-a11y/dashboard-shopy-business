@@ -67,7 +67,7 @@ th{color:var(--mute);font-weight:500}td.n,th.n{text-align:right;font-variant-num
 const ENDPOINT = "https://vps-4af99332.vps.ovh.net/webhook/prestashop-dashboard";            // ex : https://n8n.votre-domaine.com/webhook/prestashop-dashboard
 const REFRESH_MS = 60000;       // rafraîchissement automatique (60 s)
 const TARGET_MONTH = 50000;     // objectif de CA HT mensuel
-const CURRENCY = "EUR";         // ou TND, MAD, USD…
+const CURRENCY = "TND";         // ou TND, MAD, USD…
 // =========================
 const $ = id => document.getElementById(id);
 const fmt = n => new Intl.NumberFormat("fr-FR",{style:"currency",currency:CURRENCY,maximumFractionDigits:0}).format(n||0);
