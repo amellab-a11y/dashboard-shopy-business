@@ -39,7 +39,7 @@ th{color:var(--mute);font-weight:500}td.n,th.n{text-align:right;font-variant-num
   </div>
 </header>
 <main>
-  <div id="banner"></div>
+  <div id="banner">Mode démonstration : renseignez l’URL de votre webhook n8n dans la constante ENDPOINT pour afficher vos données réelles.</div>
   <section class="kpis" id="kpis"></section>
   <section class="card" id="obj"></section>
   <section class="grid">
@@ -50,7 +50,7 @@ th{color:var(--mute);font-weight:500}td.n,th.n{text-align:right;font-variant-num
     <div class="card"><h2>Top produits (chiffre d’affaires)</h2><div class="box"><canvas id="c3"></canvas></div></div>
     <div class="card"><h2>Fidélisation : clients ayant commandé plusieurs fois</h2><div class="box"><canvas id="c4"></canvas></div></div>
   </section>
-    <section class="grid grid2">
+   <section class="grid grid2">
     <div class="card wrap"><h2>Dernières commandes</h2><table><thead><tr><th>Réf.</th><th>Date</th><th>Statut</th><th class="n">Total TTC</th></tr></thead><tbody id="t1"></tbody></table></div>
     <div class="card"><h2>Retours : saisie manuelle</h2><div class="sub">Enregistré dans ce navigateur, pour la période sélectionnée.</div>
       <div class="ctl" style="margin-top:12px;flex-wrap:wrap"><label>Nombre de retours<br><input id="rn" type="number" min="0" style="width:120px"></label><label>Montant retourné TTC<br><input id="ra" type="number" min="0" style="width:140px"></label><button id="rs">Enregistrer</button></div><div id="rm" class="sub" style="margin-top:8px"></div></div>
@@ -69,7 +69,7 @@ const $ = id => document.getElementById(id);
 const fmt = n => new Intl.NumberFormat("fr-FR",{style:"currency",currency:CURRENCY,maximumFractionDigits:0}).format(n||0);
 const num = n => new Intl.NumberFormat("fr-FR").format(n||0);
 const pct = n => (n||0).toFixed(1).replace(".",",")+" %";
-let charts = {};
+let charts = {};let RENDER_ERRS=[];
 
 function demo(days){
   const daily=[];let r=0,o=0;
@@ -85,9 +85,11 @@ function demo(days){
 async function load(){
   const days=$("days").value;let data;
   if(!ENDPOINT){$("banner").style.display="block";data=demo(+days);}
-  else{try{const r=await fetch(ENDPOINT+(ENDPOINT.includes("?")?"&":"?")+"days="+days);if(!r.ok)throw new Error(r.status);data=await r.json();$("banner").style.display="none";}
-    catch(e){$("banner").style.display="block";$("banner").textContent="Impossible de joindre le webhook n8n ("+e.message+"). Vérifiez l’URL, le workflow actif et l’option CORS.";return;}}
-  render(data);
+  else{try{const r=await fetch(ENDPOINT+(ENDPOINT.includes("?")?"&":"?")+"days="+days);const txt=await r.text();if(!r.ok)throw new Error("HTTP "+r.status+" : "+txt.slice(0,160));try{data=JSON.parse(txt);}catch(x){throw new Error("réponse non JSON : "+txt.slice(0,80));}if(!data||!data.kpis)throw new Error("réponse inattendue : "+txt.slice(0,160));$("banner").style.display="none";}
+    catch(e){$("banner").style.display="block";$("banner").textContent="Webhook n8n : "+e.message+" (si « Failed to fetch » : vérifiez l’URL, le workflow actif et l’option CORS).";return;}}
+  RENDER_ERRS=[];
+  try{render(data);}catch(e){RENDER_ERRS.push(e.message);}
+  if(RENDER_ERRS.length){$("banner").style.display="block";$("banner").textContent="Erreur d’affichage : "+RENDER_ERRS.join(" | ");}
 }
 
 function delta(cur,prev,invert){
@@ -97,6 +99,7 @@ function delta(cur,prev,invert){
 }
 function render(d){
   const k=d.kpis;
+  ["daily","statuses","topProducts","recent","byPayment","byCarrier","byWeekday","loyal","lowMargin"].forEach(x=>{d[x]=d[x]||[];});
   let R={n:0,amt:0};try{R=JSON.parse(localStorage.getItem("ret_"+d.days))||R;}catch(e){}
   const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
   $("meta").textContent="Mis à jour le "+new Date(d.generatedAt).toLocaleString("fr-FR")+" · période : "+d.days+" jours";
@@ -118,7 +121,7 @@ function render(d){
   const css=getComputedStyle(document.documentElement),pri=css.getPropertyValue("--pri").trim(),mute=css.getPropertyValue("--mute").trim(),line=css.getPropertyValue("--line").trim();
   const pal=[pri,"#0f8a5f","#b7791f","#c2410c","#7c3aed","#64748b"];
   Chart.defaults.color=mute;Chart.defaults.font.family='"IBM Plex Sans",sans-serif';
-  const mk=(id,cfg)=>{charts[id]&&charts[id].destroy();charts[id]=new Chart($(id),Object.assign({options:{responsive:true,maintainAspectRatio:false}},cfg));};
+  const mk=(id,cfg)=>{try{charts[id]&&charts[id].destroy();charts[id]=new Chart($(id),Object.assign({options:{responsive:true,maintainAspectRatio:false}},cfg));}catch(e){RENDER_ERRS.push(id+" : "+e.message);}};
   const scales={x:{grid:{display:false}},y:{grid:{color:line},beginAtZero:true}};
   mk("c1",{type:"line",data:{labels:d.daily.map(x=>x.d.slice(5)),datasets:[{label:"CA HT",data:d.daily.map(x=>x.rev),borderColor:pri,backgroundColor:pri+"22",fill:true,tension:.3,pointRadius:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales}});
   mk("c2",{type:"doughnut",data:{labels:d.statuses.map(s=>s.label),datasets:[{data:d.statuses.map(s=>s.count),backgroundColor:pal,borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,cutout:"62%",plugins:{legend:{position:"bottom"}}}});
