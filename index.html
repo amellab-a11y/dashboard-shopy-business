@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Pilotage commercial – PrestaShop</title>
+<title>Pilotage commercial – SHOPYPHARMA</title>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
@@ -39,7 +39,7 @@ th{color:var(--mute);font-weight:500}td.n,th.n{text-align:right;font-variant-num
   </div>
 </header>
 <main>
-  <div id="banner">Mode démonstration : renseignez l’URL de votre webhook n8n dans la constante ENDPOINT pour afficher vos données réelles.</div>
+  <div id="banner"></div>
   <section class="kpis" id="kpis"></section>
   <section class="card" id="obj"></section>
   <section class="grid">
@@ -68,7 +68,7 @@ th{color:var(--mute);font-weight:500}td.n,th.n{text-align:right;font-variant-num
 const ENDPOINT = "https://vps-4af99332.vps.ovh.net/webhook/prestashop-dashboard";            // ex : https://n8n.votre-domaine.com/webhook/prestashop-dashboard
 const REFRESH_MS = 60000;       // rafraîchissement automatique (60 s)
 const TARGET_MONTH = 50000;     // objectif de CA HT mensuel
-const CURRENCY = "EUR";         // ou TND, MAD, USD…
+const CURRENCY = "TND";         // ou TND, MAD, USD…
 // =========================
 const $ = id => document.getElementById(id);
 const fmt = n => new Intl.NumberFormat("fr-FR",{style:"currency",currency:CURRENCY,maximumFractionDigits:0}).format(n||0);
