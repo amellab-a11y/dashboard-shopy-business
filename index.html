@@ -50,11 +50,17 @@ th{color:var(--mute);font-weight:500}td.n,th.n{text-align:right;font-variant-num
     <div class="card"><h2>Top produits (chiffre d’affaires)</h2><div class="box"><canvas id="c3"></canvas></div></div>
     <div class="card"><h2>Fidélisation : clients ayant commandé plusieurs fois</h2><div class="box"><canvas id="c4"></canvas></div></div>
   </section>
-    <section class="grid grid2">
+  <section class="grid grid3">
+    <div class="card"><h2>Moyens de paiement</h2><div class="box"><canvas id="c5"></canvas></div></div>
+    <div class="card"><h2>Transporteurs utilisés</h2><div class="box"><canvas id="c6"></canvas></div></div>
+    <div class="card"><h2>CA HT par jour de la semaine</h2><div class="box"><canvas id="c7"></canvas></div></div>
+  </section>
+  <section class="grid grid2">
     <div class="card wrap"><h2>Dernières commandes</h2><table><thead><tr><th>Réf.</th><th>Date</th><th>Statut</th><th class="n">Total TTC</th></tr></thead><tbody id="t1"></tbody></table></div>
     <div class="card"><h2>Retours : saisie manuelle</h2><div class="sub">Enregistré dans ce navigateur, pour la période sélectionnée.</div>
       <div class="ctl" style="margin-top:12px;flex-wrap:wrap"><label>Nombre de retours<br><input id="rn" type="number" min="0" style="width:120px"></label><label>Montant retourné TTC<br><input id="ra" type="number" min="0" style="width:140px"></label><button id="rs">Enregistrer</button></div><div id="rm" class="sub" style="margin-top:8px"></div></div>
   </section>
+<section class="card wrap" style="margin-top:14px"><h2>Produits les moins rentables (coût d’achat réel du réappro)</h2><table><thead><tr><th>Produit</th><th class="n">Qté vendue</th><th class="n">Marge HT</th><th class="n">Taux de marge</th></tr></thead><tbody id="t4"></tbody></table></section>
 <section class="card" style="margin-top:14px"><h2 id="lh"></h2><div class="wrap" style="max-height:420px;overflow:auto"><table><thead><tr><th>Client</th><th class="n">Commandes (12 mois)</th><th class="n">Livrées</th><th class="n">Total TTC</th><th class="n">Dernière commande</th></tr></thead><tbody id="t3"></tbody></table></div></section>
 </main>
 <script>
@@ -62,7 +68,7 @@ th{color:var(--mute);font-weight:500}td.n,th.n{text-align:right;font-variant-num
 const ENDPOINT = "https://vps-4af99332.vps.ovh.net/webhook/prestashop-dashboard";            // ex : https://n8n.votre-domaine.com/webhook/prestashop-dashboard
 const REFRESH_MS = 60000;       // rafraîchissement automatique (60 s)
 const TARGET_MONTH = 50000;     // objectif de CA HT mensuel
-const CURRENCY = "TND";         // ou TND, MAD, USD…
+const CURRENCY = "EUR";         // ou TND, MAD, USD…
 // =========================
 const $ = id => document.getElementById(id);
 const fmt = n => new Intl.NumberFormat("fr-FR",{style:"currency",currency:CURRENCY,maximumFractionDigits:0}).format(n||0);
@@ -74,8 +80,8 @@ function demo(days){
   const daily=[];let r=0,o=0;
   for(let i=days-1;i>=0;i--){const d=new Date(Date.now()-i*864e5);const x=Math.round(900+Math.random()*1600+(i%7<2?600:0));const c=Math.round(x/95);r+=x;o+=c;daily.push({d:d.toISOString().slice(0,10),rev:x,orders:c});}
   return {generatedAt:new Date().toISOString(),days,
-    kpis:{revenue:r,prevRevenue:r*0.9,orders:o,prevOrders:Math.round(o*0.94),aov:r/o,prevAov:r/o*0.96,customers:Math.round(o*0.8),repeatCustomers:Math.round(o*0.22),repeatRate:27.5,margin:Math.round(r*.38),prevMargin:Math.round(r*.9*.36),marginRate:38,loyalDelivered:Math.round(o*.35),newCustomers:Math.round(o*.58),abandoned:Math.round(o*1.6),abandonedRate:61.5,refunds:Math.round(o*.03),refundAmount:Math.round(r*.025),returns:Math.round(o*0.04),returnRate:4.1,prevReturnRate:5.2},
-    monthRevenue:Math.round(r*.6),byPayment:[{label:'Carte bancaire',count:Math.round(o*.6)},{label:'PayPal',count:Math.round(o*.25)},{label:'Virement',count:Math.round(o*.1)},{label:'Paiement à la livraison',count:Math.round(o*.05)}],byCarrier:[{label:'Colissimo',count:Math.round(o*.5)},{label:'Chronopost',count:Math.round(o*.3)},{label:'Retrait en magasin',count:Math.round(o*.2)}],byWeekday:['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'].map((l,i)=>({label:l,rev:Math.round(r/7*(i>4?1.3:.9))})),daily,statuses:[{label:"Livré",count:Math.round(o*.55)},{label:"Expédié",count:Math.round(o*.2)},{label:"En préparation",count:Math.round(o*.12)},{label:"Annulé",count:Math.round(o*.06)},{label:"Remboursé",count:Math.round(o*.04)}],
+    kpis:{revenue:r,prevRevenue:r*0.9,orders:o,prevOrders:Math.round(o*0.94),aov:r/o,prevAov:r/o*0.96,customers:Math.round(o*0.8),repeatCustomers:Math.round(o*0.22),repeatRate:27.5,margin:Math.round(r*.38),prevMargin:Math.round(r*.9*.36),marginRate:38,loyalDelivered:Math.round(o*.35),costCoverage:92,belowCost:1,newCustomers:Math.round(o*.58),abandoned:Math.round(o*1.6),abandonedRate:61.5,refunds:Math.round(o*.03),refundAmount:Math.round(r*.025),returns:Math.round(o*0.04),returnRate:4.1,prevReturnRate:5.2},
+    lowMargin:[["Crème solaire SPF50",-4.2],["Gel lavant 500 ml",3.1],["Shampooing doux",8.5],["Sérum vitamine C",14.9]].map((p,i)=>({name:p[0],qty:30+i*7,margin:Math.round(p[1]*(30+i*7)),rate:p[1]})),monthRevenue:Math.round(r*.6),byPayment:[{label:'Carte bancaire',count:Math.round(o*.6)},{label:'PayPal',count:Math.round(o*.25)},{label:'Virement',count:Math.round(o*.1)},{label:'Paiement à la livraison',count:Math.round(o*.05)}],byCarrier:[{label:'Colissimo',count:Math.round(o*.5)},{label:'Chronopost',count:Math.round(o*.3)},{label:'Retrait en magasin',count:Math.round(o*.2)}],byWeekday:['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'].map((l,i)=>({label:l,rev:Math.round(r/7*(i>4?1.3:.9))})),daily,statuses:[{label:"Livré",count:Math.round(o*.55)},{label:"Expédié",count:Math.round(o*.2)},{label:"En préparation",count:Math.round(o*.12)},{label:"Annulé",count:Math.round(o*.06)},{label:"Remboursé",count:Math.round(o*.04)}],
     topProducts:[["Casque audio Pro",310],["Montre connectée S2",260],["Sac à dos urbain",205],["Enceinte Nomade",170],["Chargeur rapide 65W",120],["Coque premium",95]].map(p=>({name:p[0],rev:p[1]*days*3})),
     recent:Array.from({length:8},(_,i)=>({ref:"CMD"+(4800-i),date:new Date(Date.now()-i*36e5*5).toISOString(),total:60+i*23,status:["Livré","Expédié","En préparation"][i%3]})),
     loyal:Array.from({length:8},(_,i)=>({name:["Sara B.","Karim T.","Amel M.","Youssef K.","Nadia R.","Omar L.","Lina H.","Hedi S."][i],orders:6-(i>>1),delivered:5-(i>>1),total:900-i*80,last:new Date(Date.now()-i*864e5*3).toISOString()}))};
@@ -106,7 +112,7 @@ function render(d){
     ["Clients récurrents",num(k.repeatCustomers),`<span class="d sub">sur ${num(k.customers)} clients actifs</span>`],
     ["Taux de réachat",pct(k.repeatRate),`<span class="d sub">≥ 2 commandes</span>`],
     ["Retours (saisie manuelle)",num(R.n),`<span class="d sub">${pct(k.orders?R.n/k.orders*100:0)} des commandes · ${fmt(R.amt)}</span>`],
-    ["Marge brute HT",fmt(k.margin),delta(k.margin,k.prevMargin)+` <span class="d sub">taux ${pct(k.marginRate)}</span>`],
+    ["Marge brute HT (coûts du réappro)",fmt(k.margin),delta(k.margin,k.prevMargin)+` <span class="d sub">taux ${pct(k.marginRate)} · coûts connus sur ${pct(k.costCoverage)} des ventes</span>`],
     ["Nouveaux clients",num(k.newCustomers),`<span class="d sub">1re commande sur 12 mois</span>`],
     ["Commandes livrées (clients récurrents)",num(k.loyalDelivered),`<span class="d sub">sur 12 mois</span>`],
     ["Paniers abandonnés",num(k.abandoned),`<span class="d sub">${pct(k.abandonedRate)} des paniers</span>`],
@@ -130,6 +136,7 @@ function render(d){
   $("t1").innerHTML=d.recent.map(o=>`<tr><td>${o.ref}</td><td>${dt(o.date)}</td><td><span class="tag">${o.status}</span></td><td class="n">${fmt(o.total)}</td></tr>`).join("");
   if(!["rn","ra"].includes(document.activeElement.id)){$("rn").value=R.n||"";$("ra").value=R.amt||"";}
   $("lh").textContent=`Clients ayant commandé plus d’une fois : ${num(k.repeatCustomers)} · commandes livrées : ${num(k.loyalDelivered)}`;
+  $("t4").innerHTML=(d.lowMargin||[]).length?d.lowMargin.map(p=>`<tr><td>${esc(p.name)}</td><td class="n">${num(p.qty)}</td><td class="n ${p.margin<0?"dn":""}">${fmt(p.margin)}</td><td class="n ${p.rate<0?"dn":""}">${pct(p.rate)}</td></tr>`).join(""):'<tr><td colspan="4">Aucune donnée de coût.</td></tr>';
   $("t3").innerHTML=(d.loyal||[]).length?d.loyal.map(c=>`<tr><td>${esc(c.name)}</td><td class="n">${c.orders}</td><td class="n">${c.delivered}</td><td class="n">${fmt(c.total)}</td><td class="n">${dt(c.last)}</td></tr>`).join(""):'<tr><td colspan="5">Aucun client récurrent sur la période.</td></tr>';
 }
 $("rs").onclick=()=>{try{localStorage.setItem("ret_"+$("days").value,JSON.stringify({n:+$("rn").value||0,amt:+$("ra").value||0}));$("rm").textContent="Enregistré.";}catch(e){$("rm").textContent="Enregistrement impossible dans ce navigateur.";}load();};
