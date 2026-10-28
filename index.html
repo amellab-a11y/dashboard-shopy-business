@@ -61,7 +61,6 @@ th{color:var(--mute);font-weight:500}td.n,th.n{text-align:right;font-variant-num
 // ===== CONFIGURATION =====
 const ENDPOINT = "https://vps-4af99332.vps.ovh.net/webhook/prestashop-dashboard";            // ex : https://n8n.votre-domaine.com/webhook/prestashop-dashboard
 const REFRESH_MS = 60000;       // rafraîchissement automatique (60 s)
-const TARGET_MONTH = 50000;     // objectif de CA HT mensuel
 const CURRENCY = "TND";         // ou TND, MAD, USD…
 // =========================
 const $ = id => document.getElementById(id);
@@ -116,7 +115,7 @@ function render(d){
   ];
   $("kpis").innerHTML=items.map(i=>`<div class="card kpi"><div class="l">${i[0]}</div><div class="v">${i[1]}</div>${i[2]}</div>`).join("");
   const m=d.monthRevenue||0,dn=new Date(),dim=new Date(dn.getFullYear(),dn.getMonth()+1,0).getDate(),proj=m/dn.getDate()*dim,pg=TARGET_MONTH?m/TARGET_MONTH*100:0;
-  $("obj").innerHTML=`<h2>Objectif du mois : ${fmt(m)} sur ${fmt(TARGET_MONTH)} (${pct(pg)})</h2><div class="bar"><i style="width:${Math.min(pg,100)}%"></i></div><div class="sub">Projection de fin de mois : ${fmt(proj)}</div>`;
+  $("obj").innerHTML=`<h2></h2><div class="bar"><i style="width:${Math.min(pg,100)}%"></i></div><div class="sub">Projection de fin de mois : ${fmt(proj)}</div>`;
   const css=getComputedStyle(document.documentElement),pri=css.getPropertyValue("--pri").trim(),mute=css.getPropertyValue("--mute").trim(),line=css.getPropertyValue("--line").trim();
   const pal=[pri,"#0f8a5f","#b7791f","#c2410c","#7c3aed","#64748b"];
   Chart.defaults.color=mute;Chart.defaults.font.family='"IBM Plex Sans",sans-serif';
