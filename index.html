@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Pilotage commercial – SHOPYPHARMA</title>
+<title>Pilotage commercial – PrestaShop</title>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
@@ -39,10 +39,9 @@ th{color:var(--mute);font-weight:500}td.n,th.n{text-align:right;font-variant-num
   </div>
 </header>
 <main>
-  <div id="banner">Mode démonstration : renseignez l’URL de votre webhook n8n dans la constante ENDPOINT pour afficher vos données réelles.</div>
-    <section class="kpis" id="kpis"></section>
+  <section class="kpis" id="kpis"></section>
   <section class="card" id="obj"></section>
-   <section class="grid">
+  <section class="grid">
     <div class="card"><h2>Chiffre d’affaires HT par jour</h2><div class="box"><canvas id="c1"></canvas></div></div>
     <div class="card"><h2>Répartition des commandes par statut</h2><div class="box"><canvas id="c2"></canvas></div></div>
   </section>
@@ -50,7 +49,12 @@ th{color:var(--mute);font-weight:500}td.n,th.n{text-align:right;font-variant-num
     <div class="card"><h2>Top produits (chiffre d’affaires)</h2><div class="box"><canvas id="c3"></canvas></div></div>
     <div class="card"><h2>Fidélisation : clients ayant commandé plusieurs fois</h2><div class="box"><canvas id="c4"></canvas></div></div>
   </section>
-   <section class="grid grid2">
+  <section class="grid grid3">
+    <div class="card"><h2>Moyens de paiement</h2><div class="box"><canvas id="c5"></canvas></div></div>
+    <div class="card"><h2>Transporteurs utilisés</h2><div class="box"><canvas id="c6"></canvas></div></div>
+    <div class="card"><h2>CA HT par jour de la semaine</h2><div class="box"><canvas id="c7"></canvas></div></div>
+  </section>
+  <section class="grid grid2">
     <div class="card wrap"><h2>Dernières commandes</h2><table><thead><tr><th>Réf.</th><th>Date</th><th>Statut</th><th class="n">Total TTC</th></tr></thead><tbody id="t1"></tbody></table></div>
     <div class="card"><h2>Retours : saisie manuelle</h2><div class="sub">Enregistré dans ce navigateur, pour la période sélectionnée.</div>
       <div class="ctl" style="margin-top:12px;flex-wrap:wrap"><label>Nombre de retours<br><input id="rn" type="number" min="0" style="width:120px"></label><label>Montant retourné TTC<br><input id="ra" type="number" min="0" style="width:140px"></label><button id="rs">Enregistrer</button></div><div id="rm" class="sub" style="margin-top:8px"></div></div>
@@ -59,22 +63,23 @@ th{color:var(--mute);font-weight:500}td.n,th.n{text-align:right;font-variant-num
 </main>
 <script>
 // ===== CONFIGURATION =====
-const ENDPOINT = "https://vps-4af99332.vps.ovh.net/webhook/prestashop-dashboard";            // ex : https://n8n.votre-domaine.com/webhook/prestashop-dashboard
+const ENDPOINT = "https://vps-4af99332.vps.ovh.net/webhook/prestashop-dashboard";          
 const REFRESH_MS = 60000;       // rafraîchissement automatique (60 s)
+const TARGET_MONTH = 5000;     // objectif de CA HT mensuel
 const CURRENCY = "TND";         // ou TND, MAD, USD…
 // =========================
 const $ = id => document.getElementById(id);
 const fmt = n => new Intl.NumberFormat("fr-FR",{style:"currency",currency:CURRENCY,maximumFractionDigits:0}).format(n||0);
 const num = n => new Intl.NumberFormat("fr-FR").format(n||0);
 const pct = n => (n||0).toFixed(1).replace(".",",")+" %";
-let charts = {};let RENDER_ERRS=[];
+let charts = {};
 
 function demo(days){
   const daily=[];let r=0,o=0;
   for(let i=days-1;i>=0;i--){const d=new Date(Date.now()-i*864e5);const x=Math.round(900+Math.random()*1600+(i%7<2?600:0));const c=Math.round(x/95);r+=x;o+=c;daily.push({d:d.toISOString().slice(0,10),rev:x,orders:c});}
   return {generatedAt:new Date().toISOString(),days,
-    kpis:{revenue:r,prevRevenue:r*0.9,orders:o,prevOrders:Math.round(o*0.94),aov:r/o,prevAov:r/o*0.96,customers:Math.round(o*0.8),repeatCustomers:Math.round(o*0.22),repeatRate:27.5,margin:Math.round(r*.38),prevMargin:Math.round(r*.9*.36),marginRate:38,loyalDelivered:Math.round(o*.35),costCoverage:92,belowCost:1,newCustomers:Math.round(o*.58),abandoned:Math.round(o*1.6),abandonedRate:61.5,refunds:Math.round(o*.03),refundAmount:Math.round(r*.025),returns:Math.round(o*0.04),returnRate:4.1,prevReturnRate:5.2},
-    lowMargin:[["Crème solaire SPF50",-4.2],["Gel lavant 500 ml",3.1],["Shampooing doux",8.5],["Sérum vitamine C",14.9]].map((p,i)=>({name:p[0],qty:30+i*7,margin:Math.round(p[1]*(30+i*7)),rate:p[1]})),monthRevenue:Math.round(r*.6),byPayment:[{label:'Carte bancaire',count:Math.round(o*.6)},{label:'PayPal',count:Math.round(o*.25)},{label:'Virement',count:Math.round(o*.1)},{label:'Paiement à la livraison',count:Math.round(o*.05)}],byCarrier:[{label:'Colissimo',count:Math.round(o*.5)},{label:'Chronopost',count:Math.round(o*.3)},{label:'Retrait en magasin',count:Math.round(o*.2)}],byWeekday:['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'].map((l,i)=>({label:l,rev:Math.round(r/7*(i>4?1.3:.9))})),daily,statuses:[{label:"Livré",count:Math.round(o*.55)},{label:"Expédié",count:Math.round(o*.2)},{label:"En préparation",count:Math.round(o*.12)},{label:"Annulé",count:Math.round(o*.06)},{label:"Remboursé",count:Math.round(o*.04)}],
+    kpis:{revenue:r,prevRevenue:r*0.9,orders:o,prevOrders:Math.round(o*0.94),aov:r/o,prevAov:r/o*0.96,customers:Math.round(o*0.8),repeatCustomers:Math.round(o*0.22),repeatRate:27.5,margin:Math.round(r*.38),prevMargin:Math.round(r*.9*.36),marginRate:38,loyalDelivered:Math.round(o*.35),newCustomers:Math.round(o*.58),abandoned:Math.round(o*1.6),abandonedRate:61.5,refunds:Math.round(o*.03),refundAmount:Math.round(r*.025),returns:Math.round(o*0.04),returnRate:4.1,prevReturnRate:5.2},
+    monthRevenue:Math.round(r*.6),byPayment:[{label:'Carte bancaire',count:Math.round(o*.6)},{label:'PayPal',count:Math.round(o*.25)},{label:'Virement',count:Math.round(o*.1)},{label:'Paiement à la livraison',count:Math.round(o*.05)}],byCarrier:[{label:'Colissimo',count:Math.round(o*.5)},{label:'Chronopost',count:Math.round(o*.3)},{label:'Retrait en magasin',count:Math.round(o*.2)}],byWeekday:['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'].map((l,i)=>({label:l,rev:Math.round(r/7*(i>4?1.3:.9))})),daily,statuses:[{label:"Livré",count:Math.round(o*.55)},{label:"Expédié",count:Math.round(o*.2)},{label:"En préparation",count:Math.round(o*.12)},{label:"Annulé",count:Math.round(o*.06)},{label:"Remboursé",count:Math.round(o*.04)}],
     topProducts:[["Casque audio Pro",310],["Montre connectée S2",260],["Sac à dos urbain",205],["Enceinte Nomade",170],["Chargeur rapide 65W",120],["Coque premium",95]].map(p=>({name:p[0],rev:p[1]*days*3})),
     recent:Array.from({length:8},(_,i)=>({ref:"CMD"+(4800-i),date:new Date(Date.now()-i*36e5*5).toISOString(),total:60+i*23,status:["Livré","Expédié","En préparation"][i%3]})),
     loyal:Array.from({length:8},(_,i)=>({name:["Sara B.","Karim T.","Amel M.","Youssef K.","Nadia R.","Omar L.","Lina H.","Hedi S."][i],orders:6-(i>>1),delivered:5-(i>>1),total:900-i*80,last:new Date(Date.now()-i*864e5*3).toISOString()}))};
@@ -83,11 +88,9 @@ function demo(days){
 async function load(){
   const days=$("days").value;let data;
   if(!ENDPOINT){$("banner").style.display="block";data=demo(+days);}
-  else{try{const r=await fetch(ENDPOINT+(ENDPOINT.includes("?")?"&":"?")+"days="+days);const txt=await r.text();if(!r.ok)throw new Error("HTTP "+r.status+" : "+txt.slice(0,160));try{data=JSON.parse(txt);}catch(x){throw new Error("réponse non JSON : "+txt.slice(0,80));}if(!data||!data.kpis)throw new Error("réponse inattendue : "+txt.slice(0,160));$("banner").style.display="none";}
-    catch(e){$("banner").style.display="block";$("banner").textContent="Webhook n8n : "+e.message+" (si « Failed to fetch » : vérifiez l’URL, le workflow actif et l’option CORS).";return;}}
-  RENDER_ERRS=[];
-  try{render(data);}catch(e){RENDER_ERRS.push(e.message);}
-  if(RENDER_ERRS.length){$("banner").style.display="block";$("banner").textContent="Erreur d’affichage : "+RENDER_ERRS.join(" | ");}
+  else{try{const r=await fetch(ENDPOINT+(ENDPOINT.includes("?")?"&":"?")+"days="+days);if(!r.ok)throw new Error(r.status);data=await r.json();$("banner").style.display="none";}
+    catch(e){$("banner").style.display="block";$("banner").textContent="Impossible de joindre le webhook n8n ("+e.message+"). Vérifiez l’URL, le workflow actif et l’option CORS.";return;}}
+  render(data);
 }
 
 function delta(cur,prev,invert){
@@ -97,7 +100,6 @@ function delta(cur,prev,invert){
 }
 function render(d){
   const k=d.kpis;
-  ["daily","statuses","topProducts","recent","byPayment","byCarrier","byWeekday","loyal","lowMargin"].forEach(x=>{d[x]=d[x]||[];});
   let R={n:0,amt:0};try{R=JSON.parse(localStorage.getItem("ret_"+d.days))||R;}catch(e){}
   const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
   $("meta").textContent="Mis à jour le "+new Date(d.generatedAt).toLocaleString("fr-FR")+" · période : "+d.days+" jours";
@@ -108,18 +110,18 @@ function render(d){
     ["Clients récurrents",num(k.repeatCustomers),`<span class="d sub">sur ${num(k.customers)} clients actifs</span>`],
     ["Taux de réachat",pct(k.repeatRate),`<span class="d sub">≥ 2 commandes</span>`],
     ["Retours (saisie manuelle)",num(R.n),`<span class="d sub">${pct(k.orders?R.n/k.orders*100:0)} des commandes · ${fmt(R.amt)}</span>`],
-    ["Marge brute HT (coûts du réappro)",fmt(k.margin),delta(k.margin,k.prevMargin)+` <span class="d sub">taux ${pct(k.marginRate)} · coûts connus sur ${pct(k.costCoverage)} des ventes</span>`],
+    ["Marge brute HT",fmt(k.margin),delta(k.margin,k.prevMargin)+` <span class="d sub">taux ${pct(k.marginRate)}</span>`],
     ["Nouveaux clients",num(k.newCustomers),`<span class="d sub">1re commande sur 12 mois</span>`],
     ["Commandes livrées (clients récurrents)",num(k.loyalDelivered),`<span class="d sub">sur 12 mois</span>`],
     ["Paniers abandonnés",num(k.abandoned),`<span class="d sub">${pct(k.abandonedRate)} des paniers</span>`],
   ];
   $("kpis").innerHTML=items.map(i=>`<div class="card kpi"><div class="l">${i[0]}</div><div class="v">${i[1]}</div>${i[2]}</div>`).join("");
   const m=d.monthRevenue||0,dn=new Date(),dim=new Date(dn.getFullYear(),dn.getMonth()+1,0).getDate(),proj=m/dn.getDate()*dim,pg=TARGET_MONTH?m/TARGET_MONTH*100:0;
-  $("obj").innerHTML=`<h2></h2>`;
+  $("obj").innerHTML=`<h2>Objectif du mois : ${fmt(m)} sur ${fmt(TARGET_MONTH)} (${pct(pg)})</h2><div class="bar"><i style="width:${Math.min(pg,100)}%"></i></div><div class="sub">Projection de fin de mois : ${fmt(proj)}</div>`;
   const css=getComputedStyle(document.documentElement),pri=css.getPropertyValue("--pri").trim(),mute=css.getPropertyValue("--mute").trim(),line=css.getPropertyValue("--line").trim();
   const pal=[pri,"#0f8a5f","#b7791f","#c2410c","#7c3aed","#64748b"];
   Chart.defaults.color=mute;Chart.defaults.font.family='"IBM Plex Sans",sans-serif';
-  const mk=(id,cfg)=>{try{charts[id]&&charts[id].destroy();charts[id]=new Chart($(id),Object.assign({options:{responsive:true,maintainAspectRatio:false}},cfg));}catch(e){RENDER_ERRS.push(id+" : "+e.message);}};
+  const mk=(id,cfg)=>{charts[id]&&charts[id].destroy();charts[id]=new Chart($(id),Object.assign({options:{responsive:true,maintainAspectRatio:false}},cfg));};
   const scales={x:{grid:{display:false}},y:{grid:{color:line},beginAtZero:true}};
   mk("c1",{type:"line",data:{labels:d.daily.map(x=>x.d.slice(5)),datasets:[{label:"CA HT",data:d.daily.map(x=>x.rev),borderColor:pri,backgroundColor:pri+"22",fill:true,tension:.3,pointRadius:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales}});
   mk("c2",{type:"doughnut",data:{labels:d.statuses.map(s=>s.label),datasets:[{data:d.statuses.map(s=>s.count),backgroundColor:pal,borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,cutout:"62%",plugins:{legend:{position:"bottom"}}}});
@@ -132,7 +134,6 @@ function render(d){
   $("t1").innerHTML=d.recent.map(o=>`<tr><td>${o.ref}</td><td>${dt(o.date)}</td><td><span class="tag">${o.status}</span></td><td class="n">${fmt(o.total)}</td></tr>`).join("");
   if(!["rn","ra"].includes(document.activeElement.id)){$("rn").value=R.n||"";$("ra").value=R.amt||"";}
   $("lh").textContent=`Clients ayant commandé plus d’une fois : ${num(k.repeatCustomers)} · commandes livrées : ${num(k.loyalDelivered)}`;
-  $("t4").innerHTML=(d.lowMargin||[]).length?d.lowMargin.map(p=>`<tr><td>${esc(p.name)}</td><td class="n">${num(p.qty)}</td><td class="n ${p.margin<0?"dn":""}">${fmt(p.margin)}</td><td class="n ${p.rate<0?"dn":""}">${pct(p.rate)}</td></tr>`).join(""):'<tr><td colspan="4">Aucune donnée de coût.</td></tr>';
   $("t3").innerHTML=(d.loyal||[]).length?d.loyal.map(c=>`<tr><td>${esc(c.name)}</td><td class="n">${c.orders}</td><td class="n">${c.delivered}</td><td class="n">${fmt(c.total)}</td><td class="n">${dt(c.last)}</td></tr>`).join(""):'<tr><td colspan="5">Aucun client récurrent sur la période.</td></tr>';
 }
 $("rs").onclick=()=>{try{localStorage.setItem("ret_"+$("days").value,JSON.stringify({n:+$("rn").value||0,amt:+$("ra").value||0}));$("rm").textContent="Enregistré.";}catch(e){$("rm").textContent="Enregistrement impossible dans ce navigateur.";}load();};
