@@ -119,7 +119,7 @@ function render(){const D=S.days,cats=S.cats,n=D.length,k={ink:css('--mut'),line
  if(n>=14)L.push(li('g',`${WN[bw]} : jour le plus fort`,`Recette moyenne de ${tnd(wa[bw])} contre ${tnd(oth)} les autres jours : à privilégier pour newsletters et publications.`));
  if(cats.length)L.push(li('',`${cats[0].n} : ${f0(div(cats[0].s,tot)*100)} % des ventes`,`${cats[0].q} produits vendus. Les 5 premières catégories font ${f0(top5*100)} % des ventes.`),li('g',`${single} catégories sur ${cats.length} n'ont vendu qu'un seul produit`,`Longue traîne à animer par des packs, des mises en avant ou du contenu, ou à regrouper.`));
  $('ins').innerHTML=L.join('');
- $('note').textContent=`Taux de conversion = commandes ÷ visites. Total des ventes par catégorie : ${tnd(tot)} ; recette quotidienne : ${tnd(R)}${Math.abs(tot-R)>1?' (écart possible dû aux remises, à la livraison ou aux statuts de commande)':''}.`;
+ $('note').textContent=`Taux de conversion = commandes ÷ visites. Total des ventes par catégorie : ${tnd(tot)} ; recette mensuelle : ${tnd(R)}${Math.abs(tot-R)>1?' (écart possible dû aux remises, à la livraison ou aux statuts de commande)':''}.`;
  Chart.defaults.font.family='Figtree,system-ui,sans-serif';
  const bo=(x={})=>({responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},...x}),
   sc=()=>({x:{grid:{display:false},ticks:{color:k.ink,maxTicksLimit:10}},y:{grid:{color:k.line},ticks:{color:k.ink},beginAtZero:true}}),lab=D.map(d=>dl(d.t)),lg={display:true,labels:{color:k.ink}};
