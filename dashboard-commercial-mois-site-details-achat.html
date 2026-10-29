@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tableau de bord commercial</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{box-sizing:border-box;--bg:#f3f6f5;--card:#fff;--ink:#14231f;--mut:#5d6e68;--line:#dbe4e1;--a:#0f766e;--b:#e2574c;--c:#c9a227;--soft:#e3f1ee}
+@media (prefers-color-scheme:dark){:root{--bg:#0f1815;--card:#18241f;--ink:#e8f1ee;--mut:#9fb2ab;--line:#2a3a34;--a:#3cc4b6;--b:#ff7a6e;--c:#e3c04e;--soft:#1f332d}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 Figtree,system-ui,sans-serif}
+main{max-width:1180px;margin:0 auto;padding:24px 16px 48px}
+h1{font-size:clamp(26px,4vw,38px);line-height:1.1;margin:0 0 6px;font-weight:800;letter-spacing:-.02em}
+h2{font-size:18px;margin:0 0 4px}.sub{color:var(--mut);margin:0}
+.top{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.btn{font:inherit;font-size:14px;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:6px 14px;border-radius:99px;cursor:pointer}
+#st{font-size:14px;margin:0 0 16px;padding:8px 12px;border-radius:8px;background:var(--soft)}#st.err{background:#fde7e4;color:#8a1f15}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:16px}
+.k{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px}
+.k b{display:block;font-size:26px;font-weight:800;letter-spacing:-.02em}.k span{color:var(--mut);font-size:14px}
+.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px;grid-column:span 12;min-width:0}
+@media(min-width:900px){.s6{grid-column:span 6}.s7{grid-column:span 7}.s5{grid-column:span 5}}
+.card p{color:var(--mut);margin:0 0 12px;font-size:14px}
+.cv{position:relative;height:280px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 12px}
+.tabs button{font:inherit;font-size:14px;border:1px solid var(--line);background:none;color:var(--ink);padding:5px 12px;border-radius:99px;cursor:pointer}
+.tabs button[aria-pressed=true]{background:var(--a);border-color:var(--a);color:#fff}
+.ins{display:grid;gap:10px;margin:0;padding:0;list-style:none}
+.ins li{border-left:4px solid var(--a);background:var(--soft);padding:10px 14px;border-radius:0 8px 8px 0}
+.ins li.w{border-color:var(--b)}.ins li.g{border-color:var(--c)}.ins strong{display:block}
+.tw{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{padding:7px 8px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}th:first-child,td:first-child{text-align:left}
+th{color:var(--mut);font-weight:600}.bar{display:inline-block;height:8px;background:var(--a);border-radius:4px;vertical-align:middle;margin-left:8px}
+.note{color:var(--mut);font-size:13px;margin-top:16px}
+</style></head><body><main>
+<div class="top"><div><h1 id="title">Tableau de bord commercial</h1><p class="sub" id="sub"></p></div><button class="btn" id="rf">Actualiser</button></div>
+<p id="st">Chargement des données…</p>
+<div class="kpis" id="kpis"></div>
+<div class="grid">
+<section class="card"><h2>À retenir pour le marketing</h2><p>Lecture automatique des chiffres de la période.</p><ul class="ins" id="ins"></ul></section>
+<section class="card s7"><h2>Évolution quotidienne</h2><div class="tabs" id="tabs"></div><div class="cv"><canvas id="ch1"></canvas></div></section>
+<section class="card s5"><h2>Visites vs commandes</h2><p>Les pics de trafic ne se transforment pas toujours en ventes.</p><div class="cv"><canvas id="ch2"></canvas></div></section>
+<section class="card s6"><h2>Meilleurs jours de la semaine</h2><p>Recette moyenne par jour (TND).</p><div class="cv"><canvas id="ch3"></canvas></div></section>
+<section class="card s6"><h2>Début vs fin de période</h2><p>Variation de la moyenne journalière entre la 1re et la 2e moitié.</p><div class="cv"><canvas id="ch4"></canvas></div></section>
+<section class="card s6"><h2>Top 10 catégories par ventes</h2><div class="cv" style="height:340px"><canvas id="ch5"></canvas></div></section>
+<section class="card s6"><h2>Poids des catégories</h2><p>Part des ventes des 5 premières catégories.</p><div class="cv" style="height:340px"><canvas id="ch6"></canvas></div></section>
+<section class="card"><h2>Détail des catégories</h2><div class="tabs"><button id="more" aria-pressed="false">Afficher toutes les catégories</button></div><div class="tw"><table id="tb"></table></div></section>
+</div>
+<p class="note" id="note"></p>
+</main>
+<script>
+/* ====== CONFIGURATION : à modifier si besoin ====== */
+const CONFIG={
+  SHEET_ID:'1fj4vg3xpMNnXDAjxRkqbgF0jj2P-RrLTyPV3JqGFELU',
+  TAB_STATS:'Tableau de bord statistiques', // nom exact de l'onglet des stats quotidiennes
+  TAB_CATS:'Répartition par catégories',    // nom exact de l'onglet des catégories
+  REFRESH_MIN:5                             // actualisation automatique (minutes)
+};
+/* Données d'octobre 2026, affichées si le Google Sheet est inaccessible */
+const SNAP={"days": [["2026-10-01", 2296, 6, 4, 16, 444.278], ["2026-10-02", 11102, 3, 3, 9, 251.05], ["2026-10-03", 2126, 2, 2, 5, 174.955], ["2026-10-04", 2195, 2, 2, 7, 128.582], ["2026-10-05", 3644, 5, 6, 19, 658.42], ["2026-10-06", 5936, 12, 6, 15, 326.894], ["2026-10-07", 6192, 9, 2, 2, 191.379], ["2026-10-08", 20674, 5, 4, 15, 331.894], ["2026-10-09", 5483, 5, 3, 6, 226.09], ["2026-10-10", 6525, 6, 2, 5, 88.633], ["2026-10-11", 4542, 7, 5, 10, 632.578], ["2026-10-12", 4364, 17, 9, 25, 962.802], ["2026-10-13", 5241, 3, 2, 8, 258.255], ["2026-10-14", 6087, 9, 6, 21, 560.756], ["2026-10-15", 3987, 9, 5, 10, 457.683], ["2026-10-16", 5910, 11, 4, 10, 313.424], ["2026-10-17", 9579, 1, 1, 2, 83.424], ["2026-10-18", 2982, 4, 3, 5, 199.746], ["2026-10-19", 2590, 1, 1, 1, 0.0], ["2026-10-20", 3059, 2, 1, 2, 57.794], ["2026-10-21", 3890, 0, 1, 7, 85.966], ["2026-10-22", 3371, 0, 0, 0, 0.0], ["2026-10-23", 3449, 2, 2, 10, 150.176], ["2026-10-24", 3676, 4, 3, 13, 405.102], ["2026-10-25", 3985, 0, 0, 0, 0.0], ["2026-10-26", 3699, 1, 2, 6, 173.921], ["2026-10-27", 3774, 1, 1, 2, 45.219], ["2026-10-28", 44514, 1, 0, 0, 0.0], ["2026-10-29", 24626, 0, 0, 0, 0.0]], "cats": [{"n": "Visage", "q": 84, "s": 3112.267, "m": 36.974}, {"n": "Solaires", "q": 16, "s": 779.628, "m": 48.727}, {"n": "Cheveux", "q": 22, "s": 631.426, "m": 28.686}, {"n": "Soins anti-taches et dépigmentants", "q": 3, "s": 405.917, "m": 135.306}, {"n": "Compléments alimentaires", "q": 12, "s": 344.245, "m": 28.687}, {"n": "BON PLAN", "q": 2, "s": 190.414, "m": 95.207}, {"n": "Dentifrices", "q": 11, "s": 166.786, "m": 14.663}, {"n": "Peaux à imperfections", "q": 3, "s": 159.44, "m": 53.147}, {"n": "Corps", "q": 9, "s": 144.579, "m": 16.064}, {"n": "Hydratants toutes peaux", "q": 3, "s": 127.708, "m": 61.437}, {"n": "Cholestérol et cardiovasculaire", "q": 4, "s": 115.2, "m": 28.8}, {"n": "Hydratants peaux sèches", "q": 3, "s": 89.342, "m": 29.781}, {"n": "Hydratant peaux grasses", "q": 1, "s": 88.378, "m": 88.378}, {"n": "Bébé et maman", "q": 3, "s": 79.387, "m": 26.462}, {"n": "SPORT & NUTRITION", "q": 2, "s": 73.58, "m": 36.79}, {"n": "Protection supérieure à spf 50+", "q": 2, "s": 72.738, "m": 36.369}, {"n": "Soins spécifiques", "q": 1, "s": 67.311, "m": 67.311}, {"n": "Déodorants aisselles", "q": 8, "s": 64.254, "m": 10.645}, {"n": "Brûle graisse", "q": 1, "s": 53.448, "m": 53.448}, {"n": "Hygiène", "q": 3, "s": 52.597, "m": 17.532}, {"n": "Epilateur électrique et manuel", "q": 3, "s": 50.42, "m": 15.13}, {"n": "Toilette intime", "q": 2, "s": 47.716, "m": 23.858}, {"n": "GEN Z", "q": 1, "s": 47.058, "m": 47.058}, {"n": "Hydratants peaux atopiques", "q": 1, "s": 45.731, "m": 45.731}, {"n": "Coupe faim et satiété", "q": 2, "s": 43.114, "m": 21.557}, {"n": "Préservatif", "q": 3, "s": 42.328, "m": 14.109}, {"n": "Lait, mousse, émulsion", "q": 1, "s": 41.816, "m": 41.816}, {"n": "Soins hydratants et nourrissants", "q": 2, "s": 39.573, "m": 19.787}, {"n": "Soins des cicatrices", "q": 1, "s": 38.405, "m": 38.405}, {"n": "Fond de teint fluide", "q": 1, "s": 37.286, "m": 37.286}, {"n": "Shampoing", "q": 1, "s": 37.084, "m": 37.084}, {"n": "Démaquillants, nettoyants visage", "q": 1, "s": 35.893, "m": 35.893}, {"n": "Brume visage", "q": 1, "s": 32.773, "m": 32.773}, {"n": "CREATINE", "q": 1, "s": 30.252, "m": 30.252}, {"n": "Minceur", "q": 1, "s": 29.886, "m": 29.886}, {"n": "Yeux et lèvres", "q": 1, "s": 29.429, "m": 29.429}, {"n": "Masques, baumes", "q": 1, "s": 28.6, "m": 28.6}, {"n": "Après-shampooing, soin des cheveux", "q": 2, "s": 28.319, "m": 14.16}, {"n": "Articulations", "q": 1, "s": 24.914, "m": 24.914}, {"n": "Soins anti-poches et cernes", "q": 1, "s": 18.7, "m": 18.7}, {"n": "Gloss", "q": 1, "s": 17.277, "m": 17.277}, {"n": "Bio & naturel", "q": 2, "s": 16.2, "m": 8.1}, {"n": "Soins anti-chute", "q": 1, "s": 14.086, "m": 14.086}, {"n": "Soins des mains", "q": 1, "s": 13.866, "m": 13.866}, {"n": "Déodorants et anti-transpirants", "q": 1, "s": 11.0, "m": 11.0}, {"n": "Compléments alimentaires bébé et enfant", "q": 1, "s": 10.876, "m": 10.876}, {"n": "Sticks baumes lèvres et réparateurs", "q": 1, "s": 10.615, "m": 10.615}, {"n": "Lubrifiant", "q": 1, "s": 6.2, "m": 6.2}, {"n": "Accueil", "q": 1, "s": 0.0, "m": 0.0}]};
+/* ================================================== */
+const $=id=>document.getElementById(id),css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const norm=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
+const f0=n=>Math.round(n).toLocaleString('fr-FR'),f1=n=>n.toLocaleString('fr-FR',{maximumFractionDigits:1}),tnd=n=>f0(n)+' TND';
+const sum=(a,x=0,y=a.length)=>a.slice(x,y).reduce((s,v)=>s+v,0),div=(a,b)=>b?a/b:0;
+const med=a=>{const s=[...a].sort((x,y)=>x-y),m=s.length>>1;return s.length?(s.length%2?s[m]:(s[m-1]+s[m])/2):0};
+const sg=n=>(n>0?'+':'')+Math.round(n)+' %',pc=(a,b)=>a?(b-a)/a*100:0;
+function csv(t){const R=[];let r=[],c='',q=false;for(let i=0;i<t.length;i++){const x=t[i];
+ if(q){if(x==='"'){if(t[i+1]==='"'){c+='"';i++}else q=false}else c+=x}
+ else if(x==='"')q=true;else if(x===','){r.push(c);c=''}else if(x==='\n'||x==='\r'){if(x==='\r'&&t[i+1]==='\n')i++;r.push(c);R.push(r);r=[];c=''}else c+=x}
+ if(c||r.length){r.push(c);R.push(r)}return R}
+function num(s){s=String(s==null?'':s).replace(/TND|DT|%|\s|\u00a0|\u202f/gi,'');if(!s)return 0;
+ const c=s.lastIndexOf(','),p=s.lastIndexOf('.');
+ if(c>-1&&p>-1)s=c>p?s.replace(/\./g,'').replace(',','.'):s.replace(/,/g,'');else if(c>-1)s=s.replace(',','.');
+ const n=parseFloat(s);return isNaN(n)?0:n}
+function table(rows,key){const h=rows.findIndex(r=>r.some(c=>norm(c).startsWith(key)));if(h<0)throw new Error('colonnes introuvables');
+ const H=rows[h].map(norm);return{H,rows:rows.slice(h+1)}}
+const col=(H,...k)=>H.findIndex(x=>k.some(y=>x.startsWith(y)));
+function parseStats(rows){const{H,rows:B}=table(rows,'date');
+ const ci={d:col(H,'date'),v:col(H,'visites'),i:col(H,'inscriptions'),c:col(H,'commandes'),p:col(H,'produits'),r:col(H,'recette')};
+ if(Object.values(ci).some(x=>x<0))throw new Error("en-têtes attendus : Date, Visites, Inscriptions, Commandes, Produits, Recette");
+ const m=B.map(r=>String(r[ci.d]||'').trim().match(/^(\d{1,4})[\/.\-](\d{1,2})[\/.\-](\d{1,4})/));
+ const non=m.filter(x=>x&&x[1].length<4),mdy=non.some(x=>+x[2]>12)&&!non.some(x=>+x[1]>12);
+ const days=[];B.forEach((r,k)=>{const x=m[k];if(!x)return;let y,mo,d;
+  if(x[1].length===4){y=+x[1];mo=+x[2];d=+x[3]}else{y=+x[3];if(y<100)y+=2000;if(mdy){mo=+x[1];d=+x[2]}else{d=+x[1];mo=+x[2]}}
+  days.push({t:Date.UTC(y,mo-1,d),v:num(r[ci.v]),i:num(r[ci.i]),c:num(r[ci.c]),p:num(r[ci.p]),r:num(r[ci.r])})});
+ days.sort((a,b)=>a.t-b.t);if(!days.length)throw new Error('aucune ligne de date valide');return days}
+function parseCats(rows){const{H,rows:B}=table(rows,'categorie');const ci={n:col(H,'categorie'),q:col(H,'produits'),s:col(H,'ventes'),m:col(H,'prix')};
+ return B.filter(r=>r[ci.n]&&!/^total/i.test(r[ci.n].trim())).map(r=>({n:r[ci.n].trim(),q:num(r[ci.q]),s:num(r[ci.s]),m:num(r[ci.m])})).sort((a,b)=>b.s-a.s)}
+async function tab(name){const u=`https://docs.google.com/spreadsheets/d/${CONFIG.SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(name)}&_=${Date.now()}`;
+ const r=await fetch(u);if(!r.ok)throw new Error('HTTP '+r.status);const t=await r.text();if(/^\s*</.test(t))throw new Error('accès refusé');return csv(t)}
+/* ---------- affichage ---------- */
+let S={days:[],cats:[]},cur='r',all=false;const CH={};
+const mk=(id,cfg)=>{CH[id]&&CH[id].destroy();CH[id]=new Chart(id,cfg)};
+const dl=t=>new Date(t).toLocaleDateString('fr-FR',{day:'numeric',month:'short',timeZone:'UTC'});
+const M={r:['Recette (TND)','a'],c:['Commandes','b'],v:['Visites','c'],i:['Inscriptions','a']};
+function render(){const D=S.days,cats=S.cats,n=D.length,k={ink:css('--mut'),line:css('--line'),a:css('--a'),b:css('--b'),c:css('--c')};
+ const A=x=>D.map(d=>d[x]),R=sum(A('r')),C=sum(A('c')),V=sum(A('v')),I=sum(A('i')),P=sum(A('p'));
+ const t0=new Date(D[0].t),t1=new Date(D[n-1].t),same=t0.getUTCMonth()===t1.getUTCMonth()&&t0.getUTCFullYear()===t1.getUTCFullYear();
+ const label=same?t0.toLocaleDateString('fr-FR',{month:'long',year:'numeric',timeZone:'UTC'}):dl(D[0].t)+' – '+dl(D[n-1].t);
+ $('title').textContent='Tableau de bord commercial · '+label.charAt(0).toUpperCase()+label.slice(1);
+ $('sub').textContent=`Du ${dl(D[0].t)} au ${dl(D[n-1].t)} · ${n} jours`;
+ $('kpis').innerHTML=[['Recette',tnd(R)],['Commandes',f0(C)],['Panier moyen',f1(div(R,C))+' TND'],['Visites',f0(V)],['Conversion',(div(C,V)*100).toFixed(2).replace('.',',')+' %'],['Inscriptions',f0(I)],['Produits / commande',f1(div(P,C))]].map(([l,v])=>`<div class="k"><b>${v}</b><span>${l}</span></div>`).join('');
+ const h=n>>1,H1=D.slice(0,h),H2=D.slice(h),av=(a,x)=>div(sum(a.map(d=>d[x])),a.length);
+ const cr=a=>div(sum(a.map(d=>d.c)),sum(a.map(d=>d.v)))*100;
+ const dr=pc(av(H1,'r'),av(H2,'r')),dv=pc(av(H1,'v'),av(H2,'v')),dc=pc(av(H1,'c'),av(H2,'c'));
+ const bi=A('r').indexOf(Math.max(...A('r'))),bd=D[bi];
+ const crs=D.filter(d=>d.v>0).map(d=>d.c/d.v),mc=med(crs),mv=med(A('v'));
+ const sp=D.filter(d=>d.v>2*mv&&d.c/d.v<.5*mc),zero=D.filter(d=>d.r===0&&d.v>0);
+ const wd=[...Array(7)].map(()=>({n:0,r:0}));D.forEach(d=>{const w=(new Date(d.t).getUTCDay()+6)%7;wd[w].n++;wd[w].r+=d.r});
+ const WN=['Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi','Dimanche'],wa=wd.map(w=>div(w.r,w.n)),bw=wa.indexOf(Math.max(...wa));
+ const oth=div(sum(wd.map((w,i)=>i===bw?0:w.r)),sum(wd.map((w,i)=>i===bw?0:w.n)));
+ const tot=sum(cats.map(c=>c.s)),top5=div(sum(cats.slice(0,5).map(c=>c.s)),tot),single=cats.filter(c=>c.q===1).length;
+ const li=(c,t,x)=>`<li class="${c}"><strong>${t}</strong>${x}</li>`,L=[];
+ if(n>=6)L.push(li(dr<-15?'w':dr>15?'':'g',`2e moitié de la période : recette moyenne ${sg(dr)} par jour, visites ${sg(dv)}`,`1re moitié : ${tnd(av(H1,'r'))}/jour et ${f1(av(H1,'c'))} commandes/jour. 2e moitié : ${tnd(av(H2,'r'))}/jour et ${f1(av(H2,'c'))} commandes/jour. Conversion ${cr(H1).toFixed(2).replace('.',',')} % puis ${cr(H2).toFixed(2).replace('.',',')} %.`));
+ if(sp.length)L.push(li('w',`Pics de trafic sans vente : ${sp.map(d=>dl(d.t)).join(', ')}`,`Jusqu'à ${f0(Math.max(...sp.map(d=>d.v)))} visites pour ${sp.map(d=>d.c).join(' / ')} commande(s) : trafic non qualifié (publicité, robots) ou incident technique, à contrôler.`));
+ if(zero.length)L.push(li('w',`${zero.length} jour(s) sans aucune recette`,zero.map(d=>dl(d.t)).join(', ')+' : visites présentes mais aucune vente.'));
+ L.push(li('',`Meilleure journée : ${dl(bd.t)}`,`${tnd(bd.r)}, ${bd.c} commandes et ${bd.i} inscriptions pour ${f0(bd.v)} visites (conversion ${(div(bd.c,bd.v)*100).toFixed(2).replace('.',',')} %). Une référence pour comprendre ce qui a fonctionné.`));
+ if(n>=14)L.push(li('g',`${WN[bw]} : jour le plus fort`,`Recette moyenne de ${tnd(wa[bw])} contre ${tnd(oth)} les autres jours : à privilégier pour newsletters et publications.`));
+ if(cats.length)L.push(li('',`${cats[0].n} : ${f0(div(cats[0].s,tot)*100)} % des ventes`,`${cats[0].q} produits vendus. Les 5 premières catégories font ${f0(top5*100)} % des ventes.`),li('g',`${single} catégories sur ${cats.length} n'ont vendu qu'un seul produit`,`Longue traîne à animer par des packs, des mises en avant ou du contenu, ou à regrouper.`));
+ $('ins').innerHTML=L.join('');
+ $('note').textContent=`Taux de conversion = commandes ÷ visites. Total des ventes par catégorie : ${tnd(tot)} ; recette quotidienne : ${tnd(R)}${Math.abs(tot-R)>1?' (écart possible dû aux remises, à la livraison ou aux statuts de commande)':''}.`;
+ Chart.defaults.font.family='Figtree,system-ui,sans-serif';
+ const bo=(x={})=>({responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},...x}),
+  sc=()=>({x:{grid:{display:false},ticks:{color:k.ink,maxTicksLimit:10}},y:{grid:{color:k.line},ticks:{color:k.ink},beginAtZero:true}}),lab=D.map(d=>dl(d.t)),lg={display:true,labels:{color:k.ink}};
+ mk('ch1',{type:cur==='v'?'line':'bar',data:{labels:lab,datasets:[{label:M[cur][0],data:A(cur),backgroundColor:k[M[cur][1]],borderColor:k[M[cur][1]],borderRadius:3,tension:.25,pointRadius:2}]},options:bo({scales:sc()})});
+ mk('ch2',{data:{labels:lab,datasets:[{type:'bar',label:'Visites',data:A('v'),backgroundColor:k.c,yAxisID:'y'},{type:'line',label:'Commandes',data:A('c'),borderColor:k.b,backgroundColor:k.b,yAxisID:'y1',tension:.25,pointRadius:2}]},options:bo({plugins:{legend:lg},scales:{x:{grid:{display:false},ticks:{color:k.ink,maxTicksLimit:8}},y:{grid:{color:k.line},ticks:{color:k.ink}},y1:{position:'right',grid:{display:false},ticks:{color:k.ink},beginAtZero:true}}})});
+ mk('ch3',{type:'bar',data:{labels:WN,datasets:[{data:wa.map(Math.round),backgroundColor:wa.map((v,i)=>i===bw?k.a:k.line)}]},options:bo({scales:sc()})});
+ const vr=[['Recette',dr],['Commandes',dc],['Visites',dv],['Conversion',pc(cr(H1),cr(H2))]];
+ mk('ch4',{type:'bar',data:{labels:vr.map(x=>x[0]),datasets:[{data:vr.map(x=>Math.round(x[1])),backgroundColor:vr.map(x=>x[1]>=0?k.a:k.b)}]},options:bo({scales:{x:{grid:{display:false},ticks:{color:k.ink}},y:{grid:{color:k.line},ticks:{color:k.ink,callback:v=>v+' %'}}}})});
+ const sh=s=>s.length>22?s.slice(0,21)+'…':s,t10=cats.slice(0,10),o=cats.slice(0,5);
+ mk('ch5',{type:'bar',data:{labels:t10.map(c=>sh(c.n)),datasets:[{data:t10.map(c=>Math.round(c.s)),backgroundColor:k.a,borderRadius:3}]},options:bo({indexAxis:'y',scales:{x:{grid:{color:k.line},ticks:{color:k.ink}},y:{grid:{display:false},ticks:{color:k.ink}}}})});
+ mk('ch6',{type:'doughnut',data:{labels:[...o.map(c=>sh(c.n)),'Autres'],datasets:[{data:[...o.map(c=>Math.round(c.s)),Math.round(tot-sum(o.map(c=>c.s)))],backgroundColor:[k.a,k.c,k.b,'#6a8fd8','#8e6fc4',k.line],borderColor:css('--card')}]},options:bo({plugins:{legend:{display:true,position:'bottom',labels:{color:k.ink}}}})});
+ const rows=all?cats:cats.slice(0,10);
+ $('tb').innerHTML='<tr><th>Catégorie</th><th>Produits vendus</th><th>Ventes (TND)</th><th>Part</th><th>Prix moyen (TND)</th></tr>'+rows.map(c=>`<tr><td>${c.n.replace(/</g,'&lt;')}</td><td>${c.q}</td><td>${f0(c.s)}</td><td>${(div(c.s,tot)*100).toFixed(1).replace('.',',')} %<span class="bar" style="width:${Math.max(2,div(c.s,cats[0].s)*60)}px"></span></td><td>${f1(c.m)}</td></tr>`).join('')}
+Object.entries(M).forEach(([key,[l]])=>{const b=document.createElement('button');b.textContent=l;b.setAttribute('aria-pressed',key===cur);b.onclick=()=>{cur=key;[...$('tabs').children].forEach(x=>x.setAttribute('aria-pressed',x===b));render()};$('tabs').appendChild(b)});
+$('more').onclick=e=>{all=!all;e.target.textContent=all?'Afficher le top 10':'Afficher toutes les catégories';e.target.setAttribute('aria-pressed',all);render()};
+async function load(){const st=$('st');st.className='';st.textContent='Actualisation…';
+ try{const[a,b]=await Promise.all([tab(CONFIG.TAB_STATS),tab(CONFIG.TAB_CATS)]);S={days:parseStats(a),cats:parseCats(b)};render();
+  st.textContent='Données en direct depuis Google Sheets · mise à jour à '+new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}
+ catch(e){S={days:SNAP.days.map(r=>({t:Date.parse(r[0]),v:r[1],i:r[2],c:r[3],p:r[4],r:r[5]})),cats:SNAP.cats};render();st.className='err';
+  st.textContent="Impossible de lire le Google Sheet ("+e.message+"). Données d'exemple affichées (octobre 2026). Vérifiez que le fichier est partagé en lecture (« Tous les utilisateurs disposant du lien ») et que les noms d'onglets sont corrects."}}
+$('rf').onclick=load;load();setInterval(load,CONFIG.REFRESH_MIN*60000);
+</script></body></html>
