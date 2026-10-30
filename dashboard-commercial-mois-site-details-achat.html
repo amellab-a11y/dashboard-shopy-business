@@ -133,8 +133,8 @@ function render(){tabs();const D=S.days,cats=S.cats,n=D.length,k={ink:css('--mut
  if(sp.length)L.push(li('w',`Pics de trafic sans vente : ${sp.map(d=>dl(d.t)).join(', ')}`,`Jusqu'à ${f0(Math.max(...sp.map(d=>d.v)))} visites pour ${sp.map(d=>d.c).join(' / ')} commande(s) : trafic non qualifié (publicité, robots) `));
  if(zero.length)L.push(li('w',`${zero.length} jour(s) sans aucune recette`,zero.map(d=>dl(d.t)).join(', ')+' : visites présentes mais aucune vente.'));
  L.push(li('',`Meilleure journée : ${dl(bd.t)}`,`${tnd(bd.r)}, ${bd.c} commandes et ${bd.i} inscriptions pour ${f0(bd.v)} visites (conversion ${(div(bd.c,bd.v)*100).toFixed(2).replace('.',',')} %).`));
- if(n>=14)L.push(li('g',`${WN[bw]} : jour le plus fort`,`Recette moyenne de ${tnd(wa[bw])} contre ${tnd(oth)} les autres jours : à privilégier pour newsletters et publications.`));
- if(cats.length)L.push(li('',`${cats[0].n} : ${f0(div(cats[0].s,tot)*100)} % des ventes`,`${cats[0].q} produits vendus. Les 5 premières catégories font ${f0(top5*100)} % des ventes.`),li('g',`${single} catégories sur ${cats.length} n'ont vendu qu'un seul produit`,`Longue traîne à animer par des packs, des mises en avant ou du contenu, ou à regrouper.`));
+ if(n>=14)L.push(li('g',`${WN[bw]} : jour le plus fort`,`Recette moyenne de ${tnd(wa[bw])} contre ${tnd(oth)} les autres jours .`));
+ if(cats.length)L.push(li('',`${cats[0].n} : ${f0(div(cats[0].s,tot)*100)} % des ventes`,`${cats[0].q} produits vendus. Les 5 premières catégories font ${f0(top5*100)} % des ventes.`),li('g',`${single} catégories sur ${cats.length} n'ont vendu qu'un seul produit`,`A animer par des packs, des mises en avant.`));
  $('ins').innerHTML=L.join('');
  //$('note').textContent=`Taux de conversion = commandes ÷ visites. Total des ventes par catégorie : ${tnd(tot)} ; recette quotidienne : ${tnd(R)}${Math.abs(tot-R)>1?' (écart possible dû aux remises, à la livraison ou aux statuts de commande)':''}.`;
  Chart.defaults.font.family='Figtree,system-ui,sans-serif';
