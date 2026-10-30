@@ -37,13 +37,18 @@ th{color:var(--mut);font-weight:600}.bar{display:inline-block;height:8px;backgro
 <p id="st">Chargement des données…</p>
 <div class="kpis" id="kpis"></div>
 <div class="grid">
-<section class="card"><h2>Analyse de la période</h2><p>Lecture automatique des chiffres de la période.</p><ul class="ins" id="ins"></ul></section>
+<section class="card"><h2>Conclusion de la période</h2><p>Lecture automatique des chiffres de la période.</p><ul class="ins" id="ins"></ul></section>
 <section class="card s7"><h2>Évolution quotidienne</h2><div class="tabs" id="tabs"></div><div class="cv"><canvas id="ch1"></canvas></div></section>
 <section class="card s5"><h2>Visites vs commandes</h2><p>Les pics de trafic ne se transforment pas toujours en ventes.</p><div class="cv"><canvas id="ch2"></canvas></div></section>
 <section class="card s6"><h2>Meilleurs jours de la semaine</h2><p>Recette moyenne par jour (TND).</p><div class="cv"><canvas id="ch3"></canvas></div></section>
-<section class="card s6"><h2>Début vs fin de période</h2><p>Variation de la moyenne journalière entre la 1re et la 2e moitié.</p><div class="cv"><canvas id="ch4"></canvas></div></section>
+<section class="card s6" id="tr" style="display:none"><h2>Sources de trafic</h2><p>30 derniers jours · sessions par canal (Google Analytics).</p><div class="cv"><canvas id="ch4"></canvas></div></section>
 <section class="card s6"><h2>Top 10 catégories par ventes</h2><div class="cv" style="height:340px"><canvas id="ch5"></canvas></div></section>
 <section class="card s6"><h2>Poids des catégories</h2><p>Part des ventes des 5 premières catégories.</p><div class="cv" style="height:340px"><canvas id="ch6"></canvas></div></section>
+<section class="card s6" id="pg" style="display:none"><h2>Pages les plus visitées</h2><p>30 derniers jours · pages vues (Google Analytics).</p><div class="cv" style="height:340px"><canvas id="ch7"></canvas></div></section>
+<section class="card s6" id="sr" style="display:none"><h2>Mots-clés saisis dans la recherche du site</h2><p>30 derniers jours · ce que vos visiteurs cherchent.</p><div class="cv" style="height:340px"><canvas id="ch8"></canvas></div></section>
+<section class="card s6" id="vi" style="display:none"><h2>Villes des visiteurs</h2><p>30 derniers jours · sessions.</p><div class="cv" style="height:340px"><canvas id="ch10"></canvas></div></section>
+<section class="card s6" id="ap" style="display:none"><h2>Appareils</h2><p>30 derniers jours · mobile, ordinateur, tablette.</p><div class="cv" style="height:340px"><canvas id="ch9"></canvas></div></section>
+<section class="card" id="en" style="display:none"><h2>Parcours d'achat</h2><p>30 derniers jours · nombre d'événements à chaque étape, avec le taux de passage depuis l'étape précédente (suivi e-commerce GA4 requis).</p><div class="cv"><canvas id="ch11"></canvas></div></section>
 <section class="card"><h2>Détail des catégories</h2><div class="tabs"><button id="more" aria-pressed="false">Afficher toutes les catégories</button></div><div class="tw"><table id="tb"></table></div></section>
 </div>
 <p class="note" id="note"></p>
@@ -54,6 +59,9 @@ const CONFIG={
   SHEET_ID:'1fj4vg3xpMNnXDAjxRkqbgF0jj2P-RrLTyPV3JqGFELU',
   TAB_STATS:'Tableau de bord statistiques', // nom exact de l'onglet des stats quotidiennes
   TAB_CATS:'Répartition par catégories',    // nom exact de l'onglet des catégories
+  TAB_GA:'GA4_Jours',                       // (facultatif) onglet rempli par le script Google Analytics : Date, Sessions, Pages vues
+  TAB_PAGES:'GA4_Pages',                    // (facultatif) onglet des pages les plus visitées : Page, Vues
+  TAB_SEARCH:'GA4_Recherches', TAB_SOURCES:'GA4_Sources', TAB_DEVICES:'GA4_Appareils', TAB_CITIES:'GA4_Villes', TAB_EVENTS:'GA4_Evenements', // (facultatifs)
   REFRESH_MIN:5                             // actualisation automatique (minutes)
 };
 /* Données d'octobre 2026, affichées si le Google Sheet est inaccessible */
@@ -83,24 +91,33 @@ function parseStats(rows){const{H,rows:B}=table(rows,'date');
  const non=m.filter(x=>x&&x[1].length<4),mdy=non.some(x=>+x[2]>12)&&!non.some(x=>+x[1]>12);
  const days=[];B.forEach((r,k)=>{const x=m[k];if(!x)return;let y,mo,d;
   if(x[1].length===4){y=+x[1];mo=+x[2];d=+x[3]}else{y=+x[3];if(y<100)y+=2000;if(mdy){mo=+x[1];d=+x[2]}else{d=+x[1];mo=+x[2]}}
-  days.push({t:Date.UTC(y,mo-1,d),v:num(r[ci.v]),i:num(r[ci.i]),c:num(r[ci.c]),p:num(r[ci.p]),r:num(r[ci.r])})});
+  days.push({t:Date.UTC(y,mo-1,d),v:num(r[ci.v]),i:num(r[ci.i]),c:num(r[ci.c]),p:num(r[ci.p]),r:num(r[ci.r]),pv:0})});
  days.sort((a,b)=>a.t-b.t);if(!days.length)throw new Error('aucune ligne de date valide');return days}
 function parseCats(rows){const{H,rows:B}=table(rows,'categorie');const ci={n:col(H,'categorie'),q:col(H,'produits'),s:col(H,'ventes'),m:col(H,'prix')};
  return B.filter(r=>r[ci.n]&&!/^total/i.test(r[ci.n].trim())).map(r=>({n:r[ci.n].trim(),q:num(r[ci.q]),s:num(r[ci.s]),m:num(r[ci.m])})).sort((a,b)=>b.s-a.s)}
 async function tab(name){const u=`https://docs.google.com/spreadsheets/d/${CONFIG.SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(name)}&_=${Date.now()}`;
  const r=await fetch(u);if(!r.ok)throw new Error('HTTP '+r.status);const t=await r.text();if(/^\s*</.test(t))throw new Error('accès refusé');return csv(t)}
+/* ---------- Google Analytics (facultatif) ---------- */
+const dk=s=>{const x=String(s).trim().match(/^(\d{1,4})[\/.\-](\d{1,2})[\/.\-](\d{1,4})/);if(!x)return'';const q=n=>String(n).padStart(2,'0');return x[1].length===4?`${x[1]}-${q(x[2])}-${q(x[3])}`:`${x[3]}-${q(x[2])}-${q(x[1])}`};
+async function ga(){
+ try{const{H,rows:B}=table(await tab(CONFIG.TAB_GA),'date'),ci={d:col(H,'date'),s:col(H,'sessions','visites'),p:col(H,'pages','vues')},m={};
+  B.forEach(r=>{const k=dk(r[ci.d]);if(k)m[k]={s:num(r[ci.s]),p:num(r[ci.p])}});
+  S.days.forEach(d=>{const g=m[new Date(d.t).toISOString().slice(0,10)];if(g){d.v=g.s;d.pv=g.p}})}catch(e){}
+ S.x={};
+ for(const[key,name,h]of[['pages',CONFIG.TAB_PAGES,'page'],['search',CONFIG.TAB_SEARCH,'terme'],['src',CONFIG.TAB_SOURCES,'canal'],['dev',CONFIG.TAB_DEVICES,'appareil'],['city',CONFIG.TAB_CITIES,'ville'],['ev',CONFIG.TAB_EVENTS,'evenement']]){
+  try{const{rows:B}=table(await tab(name),h);S.x[key]=B.filter(r=>r[0]&&r[0].trim()&&!/^\((not set|non défini)/i.test(r[0].trim())).map(r=>({n:r[0].trim(),v:num(r[1])}))}catch(e){S.x[key]=[]}}}
 /* ---------- affichage ---------- */
 let S={days:[],cats:[]},cur='r',all=false;const CH={};
 const mk=(id,cfg)=>{CH[id]&&CH[id].destroy();CH[id]=new Chart(id,cfg)};
 const dl=t=>new Date(t).toLocaleDateString('fr-FR',{day:'numeric',month:'short',timeZone:'UTC'});
-const M={r:['Recette (TND)','a'],c:['Commandes','b'],v:['Visites','c'],i:['Inscriptions','a']};
-function render(){const D=S.days,cats=S.cats,n=D.length,k={ink:css('--mut'),line:css('--line'),a:css('--a'),b:css('--b'),c:css('--c')};
- const A=x=>D.map(d=>d[x]),R=sum(A('r')),C=sum(A('c')),V=sum(A('v')),I=sum(A('i')),P=sum(A('p'));
+const M={r:['Recette (TND)','a'],pv:['Pages vues','c'],c:['Commandes','b'],v:['Visites','c'],i:['Inscriptions','a']};
+function render(){tabs();const D=S.days,cats=S.cats,n=D.length,k={ink:css('--mut'),line:css('--line'),a:css('--a'),b:css('--b'),c:css('--c')};
+ const A=x=>D.map(d=>d[x]),R=sum(A('r')),C=sum(A('c')),V=sum(A('v')),I=sum(A('i')),P=sum(A('p')),PV=sum(A('pv'));
  const t0=new Date(D[0].t),t1=new Date(D[n-1].t),same=t0.getUTCMonth()===t1.getUTCMonth()&&t0.getUTCFullYear()===t1.getUTCFullYear();
  const label=same?t0.toLocaleDateString('fr-FR',{month:'long',year:'numeric',timeZone:'UTC'}):dl(D[0].t)+' – '+dl(D[n-1].t);
  $('title').textContent='Tableau de bord commercial · '+label.charAt(0).toUpperCase()+label.slice(1);
  $('sub').textContent=`Du ${dl(D[0].t)} au ${dl(D[n-1].t)} · ${n} jours`;
- $('kpis').innerHTML=[['Recette',tnd(R)],['Commandes',f0(C)],['Panier moyen',f1(div(R,C))+' TND'],['Visites',f0(V)],['Conversion',(div(C,V)*100).toFixed(2).replace('.',',')+' %'],['Inscriptions',f0(I)],['Produits / commande',f1(div(P,C))]].map(([l,v])=>`<div class="k"><b>${v}</b><span>${l}</span></div>`).join('');
+ $('kpis').innerHTML=[['Recette',tnd(R)],['Commandes',f0(C)],['Panier moyen',f1(div(R,C))+' TND'],['Visites',f0(V)],['Conversion',(div(C,V)*100).toFixed(2).replace('.',',')+' %'],['Inscriptions',f0(I)],['Produits / commande',f1(div(P,C))],...(PV?[['Pages vues',f0(PV)],['Pages / visite',f1(div(PV,V))]]:[])].map(([l,v])=>`<div class="k"><b>${v}</b><span>${l}</span></div>`).join('');
  const h=n>>1,H1=D.slice(0,h),H2=D.slice(h),av=(a,x)=>div(sum(a.map(d=>d[x])),a.length);
  const cr=a=>div(sum(a.map(d=>d.c)),sum(a.map(d=>d.v)))*100;
  const dr=pc(av(H1,'r'),av(H2,'r')),dv=pc(av(H1,'v'),av(H2,'v')),dc=pc(av(H1,'c'),av(H2,'c'));
@@ -119,26 +136,31 @@ function render(){const D=S.days,cats=S.cats,n=D.length,k={ink:css('--mut'),line
  if(n>=14)L.push(li('g',`${WN[bw]} : jour le plus fort`,`Recette moyenne de ${tnd(wa[bw])} contre ${tnd(oth)} les autres jours : à privilégier pour newsletters et publications.`));
  if(cats.length)L.push(li('',`${cats[0].n} : ${f0(div(cats[0].s,tot)*100)} % des ventes`,`${cats[0].q} produits vendus. Les 5 premières catégories font ${f0(top5*100)} % des ventes.`),li('g',`${single} catégories sur ${cats.length} n'ont vendu qu'un seul produit`,`Longue traîne à animer par des packs, des mises en avant ou du contenu, ou à regrouper.`));
  $('ins').innerHTML=L.join('');
- //$('note').textContent=`Taux de conversion = commandes ÷ visites. Total des ventes par catégorie : ${tnd(tot)} ; recette mensuelle : ${tnd(R)}${Math.abs(tot-R)>1?' (écart possible dû aux remises, à la livraison ou aux statuts de commande)':''}.`;
+ $('note').textContent=`Taux de conversion = commandes ÷ visites. Total des ventes par catégorie : ${tnd(tot)} ; recette quotidienne : ${tnd(R)}${Math.abs(tot-R)>1?' (écart possible dû aux remises, à la livraison ou aux statuts de commande)':''}.`;
  Chart.defaults.font.family='Figtree,system-ui,sans-serif';
  const bo=(x={})=>({responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},...x}),
   sc=()=>({x:{grid:{display:false},ticks:{color:k.ink,maxTicksLimit:10}},y:{grid:{color:k.line},ticks:{color:k.ink},beginAtZero:true}}),lab=D.map(d=>dl(d.t)),lg={display:true,labels:{color:k.ink}};
  mk('ch1',{type:cur==='v'?'line':'bar',data:{labels:lab,datasets:[{label:M[cur][0],data:A(cur),backgroundColor:k[M[cur][1]],borderColor:k[M[cur][1]],borderRadius:3,tension:.25,pointRadius:2}]},options:bo({scales:sc()})});
  mk('ch2',{data:{labels:lab,datasets:[{type:'bar',label:'Visites',data:A('v'),backgroundColor:k.c,yAxisID:'y'},{type:'line',label:'Commandes',data:A('c'),borderColor:k.b,backgroundColor:k.b,yAxisID:'y1',tension:.25,pointRadius:2}]},options:bo({plugins:{legend:lg},scales:{x:{grid:{display:false},ticks:{color:k.ink,maxTicksLimit:8}},y:{grid:{color:k.line},ticks:{color:k.ink}},y1:{position:'right',grid:{display:false},ticks:{color:k.ink},beginAtZero:true}}})});
  mk('ch3',{type:'bar',data:{labels:WN,datasets:[{data:wa.map(Math.round),backgroundColor:wa.map((v,i)=>i===bw?k.a:k.line)}]},options:bo({scales:sc()})});
- const vr=[['Recette',dr],['Commandes',dc],['Visites',dv],['Conversion',pc(cr(H1),cr(H2))]];
- mk('ch4',{type:'bar',data:{labels:vr.map(x=>x[0]),datasets:[{data:vr.map(x=>Math.round(x[1])),backgroundColor:vr.map(x=>x[1]>=0?k.a:k.b)}]},options:bo({scales:{x:{grid:{display:false},ticks:{color:k.ink}},y:{grid:{color:k.line},ticks:{color:k.ink,callback:v=>v+' %'}}}})});
  const sh=s=>s.length>22?s.slice(0,21)+'…':s,t10=cats.slice(0,10),o=cats.slice(0,5);
  mk('ch5',{type:'bar',data:{labels:t10.map(c=>sh(c.n)),datasets:[{data:t10.map(c=>Math.round(c.s)),backgroundColor:k.a,borderRadius:3}]},options:bo({indexAxis:'y',scales:{x:{grid:{color:k.line},ticks:{color:k.ink}},y:{grid:{display:false},ticks:{color:k.ink}}}})});
  mk('ch6',{type:'doughnut',data:{labels:[...o.map(c=>sh(c.n)),'Autres'],datasets:[{data:[...o.map(c=>Math.round(c.s)),Math.round(tot-sum(o.map(c=>c.s)))],backgroundColor:[k.a,k.c,k.b,'#6a8fd8','#8e6fc4',k.line],borderColor:css('--card')}]},options:bo({plugins:{legend:{display:true,position:'bottom',labels:{color:k.ink}}}})});
+ const X=S.x||{},top=(a,m=10)=>[...(a||[])].sort((p,q)=>q.v-p.v).slice(0,m),show=(id,on)=>{$(id).style.display=on?'':'none'},cut=(s,m)=>s.length>m?s.slice(0,m-1)+'…':s;
+ const hb=(id,card,a,color,m)=>{const d=top(a);show(card,d.length);if(d.length)mk(id,{type:'bar',data:{labels:d.map(x=>cut(x.n,m)),datasets:[{data:d.map(x=>x.v),backgroundColor:color,borderRadius:3}]},options:bo({indexAxis:'y',scales:{x:{grid:{color:k.line},ticks:{color:k.ink}},y:{grid:{display:false},ticks:{color:k.ink}}}})})};
+ const dn=(id,card,a)=>{const d=top(a,6);show(card,d.length);if(d.length)mk(id,{type:'doughnut',data:{labels:d.map(x=>cut(x.n,24)),datasets:[{data:d.map(x=>x.v),backgroundColor:[k.a,k.c,k.b,'#6a8fd8','#8e6fc4',k.line],borderColor:css('--card')}]},options:bo({plugins:{legend:{display:true,position:'bottom',labels:{color:k.ink}}}})})};
+ hb('ch7','pg',X.pages,k.c,38);hb('ch8','sr',X.search,k.a,30);hb('ch10','vi',X.city,k.b,24);dn('ch9','ap',X.dev);dn('ch4','tr',X.src);
+ const FE=[['view_item','Fiches produit vues'],['add_to_cart','Ajouts au panier'],['begin_checkout','Débuts de commande'],['purchase','Achats']],ev=Object.fromEntries((X.ev||[]).map(e=>[e.n,e.v])),fs=FE.filter(f=>ev[f[0]]>0);
+ show('en',fs.length>1);
+ if(fs.length>1)mk('ch11',{type:'bar',data:{labels:fs.map((f,i)=>f[1]+(i?` · ${f0(div(ev[f[0]],ev[fs[i-1][0]])*100)} % de l'étape précédente`:'')),datasets:[{data:fs.map(f=>ev[f[0]]),backgroundColor:k.a,borderRadius:3}]},options:bo({indexAxis:'y',scales:{x:{grid:{color:k.line},ticks:{color:k.ink}},y:{grid:{display:false},ticks:{color:k.ink}}}})});
  const rows=all?cats:cats.slice(0,10);
  $('tb').innerHTML='<tr><th>Catégorie</th><th>Produits vendus</th><th>Ventes (TND)</th><th>Part</th><th>Prix moyen (TND)</th></tr>'+rows.map(c=>`<tr><td>${c.n.replace(/</g,'&lt;')}</td><td>${c.q}</td><td>${f0(c.s)}</td><td>${(div(c.s,tot)*100).toFixed(1).replace('.',',')} %<span class="bar" style="width:${Math.max(2,div(c.s,cats[0].s)*60)}px"></span></td><td>${f1(c.m)}</td></tr>`).join('')}
-Object.entries(M).forEach(([key,[l]])=>{const b=document.createElement('button');b.textContent=l;b.setAttribute('aria-pressed',key===cur);b.onclick=()=>{cur=key;[...$('tabs').children].forEach(x=>x.setAttribute('aria-pressed',x===b));render()};$('tabs').appendChild(b)});
+function tabs(){$('tabs').innerHTML='';Object.entries(M).filter(([key])=>key!=='pv'||S.days.some(d=>d.pv)).forEach(([key,[l]])=>{const b=document.createElement('button');b.textContent=l;b.setAttribute('aria-pressed',key===cur);b.onclick=()=>{cur=key;render()};$('tabs').appendChild(b)})}
 $('more').onclick=e=>{all=!all;e.target.textContent=all?'Afficher le top 10':'Afficher toutes les catégories';e.target.setAttribute('aria-pressed',all);render()};
 async function load(){const st=$('st');st.className='';st.textContent='Actualisation…';
- try{const[a,b]=await Promise.all([tab(CONFIG.TAB_STATS),tab(CONFIG.TAB_CATS)]);S={days:parseStats(a),cats:parseCats(b)};render();
-  st.textContent='Données en direct depuis Google Sheets · mise à jour à '+new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}
- catch(e){S={days:SNAP.days.map(r=>({t:Date.parse(r[0]),v:r[1],i:r[2],c:r[3],p:r[4],r:r[5]})),cats:SNAP.cats};render();st.className='err';
+ try{const[a,b]=await Promise.all([tab(CONFIG.TAB_STATS),tab(CONFIG.TAB_CATS)]);S={days:parseStats(a),cats:parseCats(b)};await ga();render();
+  st.textContent='Données en direct depuis Google Sheets'+(S.days.some(d=>d.pv)?' (visites et pages vues : Google Analytics)':'')+' · mise à jour à '+new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}
+ catch(e){S={days:SNAP.days.map(r=>({t:Date.parse(r[0]),v:r[1],i:r[2],c:r[3],p:r[4],r:r[5],pv:0})),cats:SNAP.cats};render();st.className='err';
   st.textContent="Impossible de lire le Google Sheet ("+e.message+"). Données d'exemple affichées (octobre 2026). Vérifiez que le fichier est partagé en lecture (« Tous les utilisateurs disposant du lien ») et que les noms d'onglets sont corrects."}}
 $('rf').onclick=load;load();setInterval(load,CONFIG.REFRESH_MIN*60000);
 </script></body></html>
