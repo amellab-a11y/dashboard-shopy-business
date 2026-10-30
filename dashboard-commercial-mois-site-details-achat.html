@@ -56,7 +56,7 @@ th{color:var(--mut);font-weight:600}.bar{display:inline-block;height:8px;backgro
 <script>
 /* ====== CONFIGURATION : à modifier si besoin ====== */
 const CONFIG={
-  SHEET_ID:'1fj4vg3xpMNnXDAjxRkqbgF0jj2P-RrLTyPV3JqGFELU',
+  SHEET_ID:'1IuxwBIH87H9WRJb977ZzCZuXLax3-pVqh3L3k3jXRlk',
   TAB_STATS:'Tableau de bord statistiques', // nom exact de l'onglet des stats quotidiennes
   TAB_CATS:'Répartition par catégories',    // nom exact de l'onglet des catégories
   TAB_GA:'GA4_Jours',                       // (facultatif) onglet rempli par le script Google Analytics : Date, Sessions, Pages vues
@@ -102,7 +102,7 @@ const dk=s=>{const x=String(s).trim().match(/^(\d{1,4})[\/.\-](\d{1,2})[\/.\-](\
 async function ga(){
  try{const{H,rows:B}=table(await tab(CONFIG.TAB_GA),'date'),ci={d:col(H,'date'),s:col(H,'sessions','visites'),p:col(H,'pages','vues')},m={};
   B.forEach(r=>{const k=dk(r[ci.d]);if(k)m[k]={s:num(r[ci.s]),p:num(r[ci.p])}});
-  S.days.forEach(d=>{const g=m[new Date(d.t).toISOString().slice(0,10)];if(g){d.v=g.s;d.pv=g.p}})}catch(e){}
+  S.days.forEach(d=>{const g=m[new Date(d.t).toISOString().slice(0,10)];if(g){d.v=g.s;d.pv=g.p;S.gaN++}});if(!S.gaN)S.gaErr='aucune date en commun avec les statistiques'}catch(e){S.gaErr=e.message}
  S.x={};
  for(const[key,name,h]of[['pages',CONFIG.TAB_PAGES,'page'],['search',CONFIG.TAB_SEARCH,'terme'],['src',CONFIG.TAB_SOURCES,'canal'],['dev',CONFIG.TAB_DEVICES,'appareil'],['city',CONFIG.TAB_CITIES,'ville'],['ev',CONFIG.TAB_EVENTS,'evenement']]){
   try{const{rows:B}=table(await tab(name),h);S.x[key]=B.filter(r=>r[0]&&r[0].trim()&&!/^\((not set|non défini)/i.test(r[0].trim())).map(r=>({n:r[0].trim(),v:num(r[1])}))}catch(e){S.x[key]=[]}}}
@@ -158,8 +158,8 @@ function render(){tabs();const D=S.days,cats=S.cats,n=D.length,k={ink:css('--mut
 function tabs(){$('tabs').innerHTML='';Object.entries(M).filter(([key])=>key!=='pv'||S.days.some(d=>d.pv)).forEach(([key,[l]])=>{const b=document.createElement('button');b.textContent=l;b.setAttribute('aria-pressed',key===cur);b.onclick=()=>{cur=key;render()};$('tabs').appendChild(b)})}
 $('more').onclick=e=>{all=!all;e.target.textContent=all?'Afficher le top 10':'Afficher toutes les catégories';e.target.setAttribute('aria-pressed',all);render()};
 async function load(){const st=$('st');st.className='';st.textContent='Actualisation…';
- try{const[a,b]=await Promise.all([tab(CONFIG.TAB_STATS),tab(CONFIG.TAB_CATS)]);S={days:parseStats(a),cats:parseCats(b)};await ga();render();
-  st.textContent='Données en direct depuis Google Sheets'+(S.days.some(d=>d.pv)?' (visites et pages vues : Google Analytics)':'')+' · mise à jour à '+new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}
+ try{const[a,b]=await Promise.all([tab(CONFIG.TAB_STATS),tab(CONFIG.TAB_CATS)]);S={days:parseStats(a),cats:parseCats(b),gaN:0};await ga();render();
+  st.textContent='Données en direct depuis Google Sheets'+(S.gaN?` · visites et pages vues : Google Analytics (${S.gaN} jours)`:' · ⚠ Google Analytics non lu ('+(S.gaErr||'?')+')')+' · version 4 · mise à jour à '+new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}
  catch(e){S={days:SNAP.days.map(r=>({t:Date.parse(r[0]),v:r[1],i:r[2],c:r[3],p:r[4],r:r[5],pv:0})),cats:SNAP.cats};render();st.className='err';
   st.textContent="Impossible de lire le Google Sheet ("+e.message+"). Données d'exemple affichées (octobre 2026). Vérifiez que le fichier est partagé en lecture (« Tous les utilisateurs disposant du lien ») et que les noms d'onglets sont corrects."}}
 $('rf').onclick=load;load();setInterval(load,CONFIG.REFRESH_MIN*60000);
