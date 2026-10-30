@@ -130,7 +130,7 @@ function render(){tabs();const D=S.days,cats=S.cats,n=D.length,k={ink:css('--mut
  const tot=sum(cats.map(c=>c.s)),top5=div(sum(cats.slice(0,5).map(c=>c.s)),tot),single=cats.filter(c=>c.q===1).length;
  const li=(c,t,x)=>`<li class="${c}"><strong>${t}</strong>${x}</li>`,L=[];
  if(n>=6)L.push(li(dr<-15?'w':dr>15?'':'g',`2e moitié de la période : recette moyenne ${sg(dr)} par jour, visites ${sg(dv)}`,`1re moitié : ${tnd(av(H1,'r'))}/jour et ${f1(av(H1,'c'))} commandes/jour. 2e moitié : ${tnd(av(H2,'r'))}/jour et ${f1(av(H2,'c'))} commandes/jour. Conversion ${cr(H1).toFixed(2).replace('.',',')} % puis ${cr(H2).toFixed(2).replace('.',',')} %.`));
- if(sp.length)L.push(li('w',`Pics de trafic sans vente : ${sp.map(d=>dl(d.t)).join(', ')}`,`Jusqu'à ${f0(Math.max(...sp.map(d=>d.v)))} visites pour ${sp.map(d=>d.c).join(' / ')} commande(s) : trafic non qualifié (publicité, robots) ou incident technique, à contrôler.`));
+ if(sp.length)L.push(li('w',`Pics de trafic sans vente : ${sp.map(d=>dl(d.t)).join(', ')}`,`Jusqu'à ${f0(Math.max(...sp.map(d=>d.v)))} visites pour ${sp.map(d=>d.c).join(' / ')} commande(s) : trafic non qualifié (publicité, robots) `));
  if(zero.length)L.push(li('w',`${zero.length} jour(s) sans aucune recette`,zero.map(d=>dl(d.t)).join(', ')+' : visites présentes mais aucune vente.'));
  L.push(li('',`Meilleure journée : ${dl(bd.t)}`,`${tnd(bd.r)}, ${bd.c} commandes et ${bd.i} inscriptions pour ${f0(bd.v)} visites (conversion ${(div(bd.c,bd.v)*100).toFixed(2).replace('.',',')} %). Une référence pour comprendre ce qui a fonctionné.`));
  if(n>=14)L.push(li('g',`${WN[bw]} : jour le plus fort`,`Recette moyenne de ${tnd(wa[bw])} contre ${tnd(oth)} les autres jours : à privilégier pour newsletters et publications.`));
